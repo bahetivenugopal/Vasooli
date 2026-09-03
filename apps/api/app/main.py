@@ -21,15 +21,28 @@ from app.core.config import settings
 from app.db.base import Base
 from app.db.session import engine
 
+# Imported for the side effect of registering ORM models on `Base` before
+# `create_all()` runs. A table missing because its module was never imported
+# surfaces as a baffling error much later.
+from app.models import AuditEntry, BatchRun  # noqa: F401
+from app.services.llm_agent import REGISTRY
+from app.services.reasoning_tasks import register_core_tasks
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Create tables for any models registered on `Base` at import time.
+    """Create tables, then prove every reasoning task has a way to degrade.
 
-    Fine for SQLite at hackathon scale. A real migration tool is the answer once
-    the schema has to survive its own history — not now.
+    The fallback check is deliberately a **startup** failure: discovering a
+    missing fallback mid-demo, at the moment the quota runs out, is exactly the
+    failure this design exists to prevent (ADR 0002).
+
+    Table creation is fine for SQLite at hackathon scale. A real migration tool
+    is the answer once the schema has to survive its own history — not now.
     """
     Base.metadata.create_all(bind=engine)
+    register_core_tasks()
+    REGISTRY.verify_all_have_fallbacks()
     yield
 
 

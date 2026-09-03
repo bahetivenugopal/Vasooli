@@ -1,0 +1,82 @@
+{
+  "_comment": [
+    "Razorpay error objects for simulated mode, one per verified error-scenario",
+    "test card in the `razorpay-api` skill (doc-verified 2026-09-03). Each key is",
+    "the `error.reason` value that card produces, so a simulated batch and a real",
+    "test-mode batch normalize through exactly the same mapping table.",
+    "Adding a scenario means confirming it against a live test-mode response",
+    "first — a fixture built from recollection is a silent-wrong-answer generator."
+  ],
+  "insufficient_fund": {
+    "code": "BAD_REQUEST_ERROR",
+    "description": "Your payment could not be completed due to insufficient account balance. Try another card or payment method.",
+    "field": null,
+    "source": "customer",
+    "step": "payment_authentication",
+    "reason": "insufficient_fund",
+    "metadata": {}
+  },
+  "payment_timed_out": {
+    "code": "GATEWAY_ERROR",
+    "description": "Payment was not completed on time. Try again.",
+    "field": null,
+    "source": "gateway",
+    "step": "payment_authentication",
+    "reason": "payment_timed_out",
+    "metadata": {}
+  },
+  "gateway_technical_error": {
+    "code": "GATEWAY_ERROR",
+    "description": "Payment failed due to a technical error at the bank. Any amount debited will be refunded in 4-5 business days.",
+    "field": null,
+    "source": "gateway",
+    "step": "payment_authorization",
+    "reason": "gateway_technical_error",
+    "metadata": {}
+  },
+  "payment_cancelled": {
+    "code": "BAD_REQUEST_ERROR",
+    "description": "Payment was cancelled by the customer.",
+    "field": null,
+    "source": "customer",
+    "step": "payment_authentication",
+    "reason": "payment_cancelled",
+    "metadata": {}
+  },
+  "card_declined": {
+    "code": "BAD_REQUEST_ERROR",
+    "description": "Payment was declined by the bank. Try another card or payment method.",
+    "field": null,
+    "source": "bank",
+    "step": "payment_authorization",
+    "reason": "card_declined",
+    "metadata": {}
+  },
+  "card_disabled_for_online_payments": {
+    "code": "BAD_REQUEST_ERROR",
+    "description": "Your card is not enabled for online payments. Contact your bank to enable it, or use another card.",
+    "field": null,
+    "source": "bank",
+    "step": "payment_authorization",
+    "reason": "card_disabled_for_online_payments",
+    "metadata": {}
+  },
+  "card_number_invalid": {
+    "code": "BAD_REQUEST_ERROR",
+    "description": "The card number is invalid. Check the details and try again.",
+    "field": "card_number",
+    "source": "customer",
+    "step": "payment_initiation",
+    "reason": "card_number_invalid",
+    "metadata": {}
+  },
+  "authentication_failed": {
+    "code": "BAD_REQUEST_ERROR",
+    "description": "Payment processing failed due to an error at the bank's end. Verification could not be completed.",
+    "field": null,
+    "source": "bank",
+    "step": "payment_authentication",
+    "reason": "authentication_failed",
+    "metadata": {}
+  }
+}

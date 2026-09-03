@@ -44,6 +44,13 @@ class Settings(BaseSettings):
     razorpay_key_secret: str = ""
     razorpay_webhook_secret: str = ""
 
+    # `simulated` fulfils calls from local fixtures, deterministically and
+    # offline; `test` makes real calls against Razorpay test mode. Simulated is
+    # the default because a batch run that depends on live network conditions is
+    # not reproducible. The mode is written to every audit entry, so it is
+    # always visible and never silent. See ADR 0004.
+    razorpay_mode: str = "simulated"
+
     # --- Reasoning provider (Gemini) ---------------------------------------
     gemini_api_key: str = ""
 
@@ -81,6 +88,20 @@ class Settings(BaseSettings):
                 "use a key starting with 'rzp_test_'. Rotate the live key now — "
                 "it has been exposed to this process."
             )
+        return v
+
+    @field_validator("razorpay_mode")
+    @classmethod
+    def _known_razorpay_mode(cls, v: str) -> str:
+        """Reject an unrecognised mode rather than guessing which was meant.
+
+        A typo silently falling back to `simulated` would make a run that looks
+        live actually be fixtures, which is precisely the confusion the mode
+        exists to prevent.
+        """
+        allowed = {"simulated", "test"}
+        if v not in allowed:
+            raise ValueError(f"RAZORPAY_MODE must be one of {sorted(allowed)}; got {v!r}")
         return v
 
     @property

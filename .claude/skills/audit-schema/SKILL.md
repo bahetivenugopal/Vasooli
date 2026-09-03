@@ -38,8 +38,8 @@ Minimum viable record. Adding fields is fine; removing any of these is not.
 | `id` | int / uuid | yes | Primary key |
 | `timestamp` | datetime (UTC, tz-aware) | yes | When the decision was made. UTC always — never naive local time |
 | `batch_id` | str | yes | Ties the entry to one reproducible synthetic batch. Without this, no per-batch recovery number is defensible |
-| `engine` | enum | yes | `root_cause` \| `mandate_recovery` \| `receivables` |
-| `entity_type` | enum | yes | `payment` \| `mandate` \| `invoice` \| `corridor` |
+| `engine` | enum | yes | `root_cause` \| `mandate_recovery` \| `receivables` \| `core`. `core` is the shared core acting before any engine exists — batch bookkeeping, a logged API call — kept distinct so per-engine metrics stay clean |
+| `entity_type` | enum | yes | `payment` \| `mandate` \| `invoice` \| `corridor` \| `batch` |
 | `entity_id` | str | yes | The transaction / mandate / invoice / corridor this concerns |
 | `action` | enum | yes | What was done, or refused. See below |
 | `outcome` | enum | yes | How it turned out. See below |
@@ -47,12 +47,13 @@ Minimum viable record. Adding fields is fine; removing any of these is not.
 | `authorising_rule` | str | yes | **The citation.** See "Rule citation format" |
 | `provenance` | object | yes | How the decision was produced. See "Provenance" below. **Replaces the old `decision_source` field** — keep one, not both |
 | `rationale` | text | yes | Human-readable why, one or two sentences |
-| `amount_paise` | int | no | Integer paise. Never floats for money |
+| `amount_at_risk_paise` | int | yes | Integer paise, defaults to 0. The money this action concerns |
+| `amount_recovered_paise` | int | yes | Integer paise, defaults to 0. What the action actually brought back. Every headline metric is computed from these two |
 | `currency` | str | no | `INR` |
 | `attempt_number` | int | no | Which attempt in the schedule this was |
 | `attempts_remaining` | int | no | Budget left after this decision — makes boundedness visible at a glance |
 | `model_confidence` | float | no | Required whenever `provenance.source` is `model`. Distinct from provenance: it describes the *answer*, not how it was produced |
-| `metadata` | JSON | no | Engine-specific extras. Never put a required field in here |
+| `metadata` | JSON | no | Engine-specific extras. Never put a required field in here. (SQLAlchemy reserves `metadata` on the declarative base, so the ORM attribute is `entry_metadata`; the column and the API field keep this name) |
 
 ### `action` values
 
@@ -70,6 +71,7 @@ Minimum viable record. Adding fields is fine; removing any of these is not.
 | `escalate` | Escalation up the capped ladder |
 | `block_attempt` | **A precondition failed and the action was refused** |
 | `halt_schedule` | Terminal stop — no further attempts, ever |
+| `api_call` | A Razorpay call and its result. Not a policy decision — the record that a call happened, and in which mode |
 
 ### `outcome` values
 
@@ -159,15 +161,36 @@ reasoning layer.
 
 ## Writing rules
 
-- **Write-once, append-only.** Audit entries are never updated or deleted. A
-  correction is a new entry.
+- **Write-once, append-only.** Audit entries are never deleted, and the service
+  exposes no generic update. A correction is a new entry.
+- **The one permitted mutation** is `audit_trail.resolve_outcome()`, which moves
+  an entry off `outcome: pending` once its result is known, optionally setting
+  `amount_recovered_paise`. It refuses an entry that is already resolved, so
+  history is never rewritten — only completed. Anything else about a settled
+  entry that turns out to be wrong is corrected by writing a new entry, not by
+  editing the old one.
+
+  *Why the exception exists:* an action with an external side effect is recorded
+  **before** it happens, so its outcome is genuinely unknown at write time.
+  Without this, either the entry would be written after the fact (and an action
+  that crashed mid-flight would leave no record at all) or every resolution
+  would need a second entry to be joined against, which makes the batch summary
+  a join rather than a sum. One narrow, guarded transition is the smaller cost.
 - **Write before acting**, not after, for anything with an external side effect.
   An action that happened without a record is unprovable; a record for an action
   that then failed is just an entry with `outcome = failure`.
 - **Money is integer paise.** Never a float, anywhere in this table.
+- **Every entry carries a rationale**, and a `source: model` entry carries
+  `model_confidence`. Both are enforced by the writer, which raises rather than
+  storing an entry nobody could later explain.
 - **Timestamps are tz-aware UTC.**
-- The writer lives at `apps/api/app/services/audit_trail.py`. Engines never touch
-  the audit table directly.
+- The writer lives at `apps/api/app/services/audit_trail.py`; the ORM model and
+  the read schemas at `apps/api/app/models/audit.py`. Engines never touch the
+  audit table directly.
+- `batch_summary()` computes every reported figure from the entries themselves,
+  split by `provenance.source`, and counts `policy_violations` — stored rows
+  that break the rules on this page. A batch with a non-zero count is telling
+  you something arrived without going through the writer.
 
 ## Consumers
 
