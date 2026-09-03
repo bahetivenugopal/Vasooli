@@ -1,13 +1,3 @@
-> **Historical record — partially superseded. Do not treat as current.**
-> This is the original phase-00 brief, kept unedited so the build history stays
-> honest. Two things have since changed:
-> - **Reasoning provider:** Anthropic Claude → **Google Gemini**, behind a thin
->   provider interface with a deterministic fallback per task. `claude_agent.py`
->   is now `llm_agent.py`. See [ADR 0002](../adr/0002-gemini-provider-and-deterministic-fallbacks.md).
-> - **Python:** 3.11 → **3.12**. See [ADR 0001](../adr/0001-pin-python-3-12.md).
->
-> For current instructions read [`.claude/CLAUDE.md`](../../.claude/CLAUDE.md).
-
 # Vasooli — Project Context & Initialization
 
 **Read this entire file before doing anything.** This is the full context transfer for a project that already has a locked scope, tech stack, and architecture — your job right now is narrowly defined in the "Your task right now" section near the bottom. Do not start building product features yet; that happens in separate phase files that will be added to this repo one at a time.
@@ -20,7 +10,7 @@
 
 **Tagline**: *"Revenue doesn't disappear. It goes missing. Vasooli brings it back."*
 
-**One-paragraph pitch**: Businesses lose revenue in three distinct, quietly compounding ways — a payment corridor degrades and nobody notices, a recurring mandate/subscription charge fails and the customer never meant to churn, or a B2B invoice goes overdue and just sits there. Vasooli is one shared recovery engine — one policy layer, one Claude-powered reasoning layer, one audit trail — applied to all three leak points, so every recovery action is bounded, explainable, and provably compliant, not just "an agent that tries stuff."
+**One-paragraph pitch**: Businesses lose revenue in three distinct, quietly compounding ways — a payment corridor degrades and nobody notices, a recurring mandate/subscription charge fails and the customer never meant to churn, or a B2B invoice goes overdue and just sits there. Vasooli is one shared recovery engine — one policy layer, one LLM-powered reasoning layer, one audit trail — applied to all three leak points, so every recovery action is bounded, explainable, and provably compliant, not just "an agent that tries stuff."
 
 ---
 
@@ -40,7 +30,7 @@ We deliberately chose **3 unified capabilities that absorb 5 of the track's 7 ex
 
 ### Engine 1 — Root-Cause Recovery Engine
 Covers example direction: *payment degradation → root cause → recovery*.
-Watches a stream of payment attempts. When a specific corridor (a bank, a payment method, a route) starts failing at an abnormal rate, it diagnoses *why* — is this one customer's problem (e.g. insufficient funds) or a corridor-wide problem (e.g. a specific issuing bank's UPI rail degrading for everyone routed through it)? Those two situations look similar from a single decline code but demand opposite responses: dunning one customer vs. instantly rerouting all affected traffic. This diagnosis is the most genuinely agentic, judgment-requiring part of the whole build — it should be a real Claude reasoning call, not a hardcoded if/else.
+Watches a stream of payment attempts. When a specific corridor (a bank, a payment method, a route) starts failing at an abnormal rate, it diagnoses *why* — is this one customer's problem (e.g. insufficient funds) or a corridor-wide problem (e.g. a specific issuing bank's UPI rail degrading for everyone routed through it)? Those two situations look similar from a single decline code but demand opposite responses: dunning one customer vs. instantly rerouting all affected traffic. This diagnosis is the most genuinely agentic, judgment-requiring part of the whole build — it should be a real LLM reasoning call, not a hardcoded if/else.
 
 ### Engine 2 — Mandate & Subscription Recovery Engine
 Covers example directions: *mandate retry sequencer* + *failed-subscription recovery* (treated as one, because in India they are the same event: a failed recurring charge is, mechanically, a mandate/AFA event).
@@ -48,7 +38,7 @@ For every failed recurring charge: classify **soft decline** (temporary — insu
 
 ### Engine 3 — B2B Receivables Chaser with Promise-to-Pay Tracking
 Covers example directions: *B2B receivables chaser* + *promise-to-pay tracker* (treated as one workflow, since a chaser without PTP tracking is incomplete and PTP tracking without a chase workflow is meaningless on its own).
-For a batch of overdue invoices: draft an escalating-but-never-harassing reminder sequence, extract any "I'll pay by [date]" commitment the customer makes in their reply (a genuine Claude text-understanding task), track it, and only escalate the promises that get **broken** — with a capped, compliant escalation ladder.
+For a batch of overdue invoices: draft an escalating-but-never-harassing reminder sequence, extract any "I'll pay by [date]" commitment the customer makes in their reply (a genuine LLM text-understanding task), track it, and only escalate the promises that get **broken** — with a capped, compliant escalation ladder.
 
 **Deliberately out of scope for this build**: checkout drop-off recovery (too generic/marketing-flavored, least payments-native, weakest differentiation) and Hinglish voice recovery as a *core* engine (reframed as an optional bonus delivery channel bolted onto Engine 2's notification step, only if time remains after the three engines above are solid and demo-ready — never build this before the core three are done).
 
@@ -80,7 +70,7 @@ Engine 2's retry scheduler must be provably bounded by these constraints (max re
 | Frontend | Next.js 14 (App Router), TypeScript, Tailwind CSS, shadcn/ui, Recharts |
 | Backend | Python 3.11, FastAPI, Pydantic v2 |
 | Database/ORM | SQLite via SQLAlchemy (deliberately zero-setup for the hackathon; connection string swap gets you Postgres later, don't build that now) |
-| Agent/reasoning layer | Anthropic Claude, Messages API, real tool-calling — this is the actual product intelligence (root-cause diagnosis, decline explanations, dunning/receivables message drafting, promise-to-pay extraction from free text) and must be genuine LLM judgment, not rules dressed up as AI |
+| Agent/reasoning layer | Google Gemini (`gemini-3.1-flash-lite-preview`), accessed through a provider interface in `services/llm_agent.py`. This is the actual product intelligence (root-cause diagnosis, decline explanations, dunning/receivables message drafting, promise-to-pay extraction from free text) and must be genuine LLM judgment, not rules dressed up as AI. Every reasoning task has a defined deterministic fallback so a batch run never fails |
 | Payments | Official `razorpay` Python SDK; direct `httpx` calls only for anything the SDK doesn't cover; **test-mode keys only, always** |
 | Testing | Pytest, focused heavily on `policy_engine.py` — this is the credibility backbone of the whole submission |
 | Lint/format | Ruff (Python), ESLint + Prettier (TS) |
@@ -88,7 +78,7 @@ Engine 2's retry scheduler must be provably bounded by these constraints (max re
 
 Rationale in one line: this stack is the one Claude Code has the deepest, most reliable fluency in — fewer hallucinated APIs, faster correct-on-first-try generation — while giving up nothing a "better" stack would offer at this scale and time budget.
 
-**Explicitly not doing**: no Kubernetes/Docker-Compose, no splitting the three engines into separate microservices (one FastAPI app, cleanly separated by folder), no custom agent framework layered on top of the Anthropic API. All three would be premature complexity with zero payoff for judges in a ~30-hour build.
+**Explicitly not doing**: no Kubernetes/Docker-Compose, no splitting the three engines into separate microservices (one FastAPI app, cleanly separated by folder), no custom agent framework layered on top of the provider SDK. All three would be premature complexity with zero payoff for judges in a ~30-hour build.
 
 ---
 
@@ -105,7 +95,7 @@ Synthetic data generator (transactions, mandates, invoices)
                                    │
                     ┌──────────────▼──────────────┐
                     │         Shared core          │
-                    │  policy engine · Claude agent │
+                    │  policy engine · LLM agent   │
                     │       · audit trail           │
                     └──────────────┬──────────────┘
                                    │
@@ -114,7 +104,7 @@ Synthetic data generator (transactions, mandates, invoices)
         Razorpay test-mode API          Control tower dashboard
 ```
 
-An engine's own code should almost entirely be about *what data it ingests* and *what recovery actions it's allowed to call* — the actual judgment (is this retryable, what's the root cause, what's the next bounded action, log it) always routes through the same `policy_engine.py`, the same `claude_agent.py` wrapper, and the same `audit_trail.py` writer in `apps/api/app/services/`. Build the hard part once.
+An engine's own code should almost entirely be about *what data it ingests* and *what recovery actions it's allowed to call* — the actual judgment (is this retryable, what's the root cause, what's the next bounded action, log it) always routes through the same `policy_engine.py`, the same `llm_agent.py` wrapper, and the same `audit_trail.py` writer in `apps/api/app/services/`. Build the hard part once.
 
 ---
 
@@ -133,6 +123,7 @@ vasooli/
 │   │   └── docs-and-pitch-writer.md
 │   ├── skills/
 │   │   ├── razorpay-api/SKILL.md
+│   │   ├── llm-provider/SKILL.md
 │   │   ├── decline-taxonomy/SKILL.md
 │   │   ├── rbi-mandate-rules/SKILL.md
 │   │   ├── audit-schema/SKILL.md
@@ -160,7 +151,7 @@ vasooli/
 │           │   ├── root_cause/
 │           │   ├── mandate_recovery/
 │           │   └── receivables/
-│           ├── services/          # the shared core, literally: razorpay_client.py, claude_agent.py, policy_engine.py, audit_trail.py
+│           ├── services/          # the shared core, literally: razorpay_client.py, llm_agent.py, policy_engine.py, audit_trail.py
 │           ├── models/
 │           ├── db/
 │           └── tests/
@@ -201,7 +192,8 @@ Reference knowledge loaded before touching related code — same pattern as this
 - **`razorpay-api`** — exact endpoints, auth headers, request/response shapes for Orders, Payment Links, Subscriptions, and relevant test-mode card/UPI test credentials. Populate from Razorpay's official test-mode docs.
 - **`decline-taxonomy`** — the soft-vs-hard decline classification from section 4, as a lookup table (decline reason → soft/hard → default action).
 - **`rbi-mandate-rules`** — the AFA/pre-debit/threshold/revocation facts from section 4, as a factual reference the policy engine cites directly.
-- **`audit-schema`** — the single audit-trail log schema every engine writes to: at minimum, timestamp, engine name, entity id, action taken, the rule/reasoning that authorized it, and outcome. Define this schema once, here, before any engine is built.
+- **`llm-provider`** — Gemini configuration and usage: the model in use, how to call it, structured-output prompting, free-tier rate limits and exponential backoff on 429s, the response-caching strategy, and the deterministic fallback contract every reasoning task must define. Any code that calls a model reads this first.
+- **`audit-schema`** — the single audit-trail log schema every engine writes to: at minimum, timestamp, engine name, entity id, action taken, the rule/reasoning that authorized it, outcome, and the provenance fields (`source`, `provider`, `model`, `cache_hit`, `prompt_version`, `abstained`). Define this schema once, here, before any engine is built.
 - **`conventional-commits`** — commit message format (`feat:`, `fix:`, `chore:`, `docs:`, `test:`, scoped like `feat(root-cause): ...`) and guidance to commit after every meaningful, working increment — not once per phase.
 
 ### Commands (`.claude/commands/*.md`)
@@ -225,7 +217,7 @@ Do the following, in this order, and nothing beyond it:
 3. Write all 6 agent files, all 5 skill files, and all 3 command files per the specs in section 8, using the domain facts in sections 3 and 4 as source material — these should be complete and useful, not stubs.
 4. Initialize `apps/web` as a Next.js 14 + TypeScript + Tailwind + shadcn/ui project (base scaffold from the framework's own tooling, no custom pages yet beyond the default).
 5. Initialize `apps/api` as a FastAPI project with a minimal `main.py` (a health-check route is enough), `requirements.txt` pinned to reasonable versions, Pydantic v2, SQLAlchemy configured against a local SQLite file, and Ruff configured.
-6. Write `.env.example` covering: Razorpay test-mode key id/secret, Anthropic API key, and any DB path config.
+6. Write `.env.example` covering: Razorpay test-mode key id/secret, `GEMINI_API_KEY`, `GEMINI_MODEL` (defaulting to `gemini-3.1-flash-lite-preview`), a flag to force deterministic-only mode, an LLM response cache path, and the DB path.
 7. Write a `.gitignore` covering both Node and Python (node_modules, .next, __pycache__, .venv, .env, *.db, etc).
 8. Write a first-pass `README.md`: project name, one-paragraph pitch, the architecture diagram (ASCII from section 6 is fine for now), and a "status: scaffolding complete, build in progress" note.
 9. Stop. Do not build any engine logic, any product routes beyond the health check, or any dashboard pages. That work comes in separate phase files that will be added to this repo next, one at a time, each followed by a check and a commit.
