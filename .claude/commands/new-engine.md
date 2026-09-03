@@ -26,7 +26,7 @@ The actual judgment — is this retryable, what's the root cause, what's the nex
 bounded action, log it — **always** routes through the shared core:
 
 - `services/policy_engine.py` — decides what is allowed
-- `services/claude_agent.py` — supplies judgment
+- `services/llm_agent.py` — supplies judgment (and its registered fallback)
 - `services/audit_trail.py` — records what happened
 
 The hard part is built once. A new engine reuses it; it never reimplements it.
@@ -53,8 +53,10 @@ Plus a test module at `apps/api/app/tests/test_$1.py`.
 - **No direct Razorpay calls.** Everything goes through
   `services/razorpay_client.py`.
 - **Every action writes an audit entry** through `services/audit_trail.py`,
-  carrying `batch_id`, `reason_code`, and `authorising_rule` per the
-  `audit-schema` skill.
+  carrying `batch_id`, `reason_code`, `authorising_rule`, and a full `provenance`
+  object per the `audit-schema` skill.
+- **Every reasoning task registers a deterministic fallback.** A task without one
+  must fail at startup, not at runtime. See the `llm-provider` skill.
 - **Actions are an explicit, enumerable set** in `actions.py`. An engine that can
   call anything is not bounded, and boundedness is the product.
 - **Pydantic v2** for all schemas. Money as integer paise. Timestamps tz-aware UTC.

@@ -61,6 +61,29 @@ right action:
 Every mapping row in the verified table in `decline-taxonomy` should be asserted
 against the exact Razorpay `error.reason` string it comes from.
 
+### The reasoning layer — cover the failure modes, not the happy path
+
+Load the `llm-provider` skill. Mock the **provider interface**, never the SDK.
+Required coverage:
+
+- **Cache hit and cache miss** — a miss calls the provider, a hit does not, and
+  the hit is recorded as `cache_hit: true` while staying `source: model`.
+- **Rate-limit backoff then success** — a `429` followed by a successful retry.
+- **Rate-limit beyond backoff** — three delays exhausted, then the fallback.
+- **Malformed output** — retried once, then the fallback on the second failure.
+- **`LLM_DETERMINISTIC_ONLY=true`** — the provider is never called at all.
+- **Every registered fallback** produces a valid result, audited with
+  `source: deterministic`.
+- **No reasoning task exists without a registered fallback.** Assert this
+  directly — it is the rule that must fail at *startup*, so test that it does.
+
+Assert on `provenance` as part of the contract: `source`, `provider`, `model`,
+`cache_hit`, `prompt_version`, `abstained`, with `latency_ms` and `tokens` null
+for deterministic results.
+
+Never let a test make a live provider call. A suite that needs a key, or that
+turns red when a quota runs out, is not a suite.
+
 ### Test the blocks, not just the successes
 
 Blocked and halted outcomes are the compliance evidence. A test suite that only

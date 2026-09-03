@@ -57,12 +57,23 @@ Two subtly different button components is how a codebase starts rotting, and in 
 
 The audit trail (see the `audit-schema` skill) is the product's most convincing
 artifact. Render it. `authorising_rule`, `reason_code`, `attempts_remaining` and
-`decision_source` are the interesting fields — a viewer seeing
-`rbi-mandate-rules:A4` next to a halted retry understands the claim instantly.
+`provenance` are the interesting fields — a viewer seeing `rbi-mandate-rules:A4`
+next to a halted retry understands the claim instantly.
 
-Show `decision_source` honestly: which decisions were policy lookups, which were
-model judgment, which were both. The split is a strength, not something to hide
-behind an "AI" badge.
+Show **`provenance.source`** honestly on every decision: which were *reasoned*
+by the model and which were *ruled* by a deterministic fallback. The split is a
+strength, not something to hide behind an "AI" badge — a system that keeps
+working when the provider is down is a better story than one that pretends every
+decision was reasoned.
+
+Two consequences for the UI:
+
+- **Never blend the two in one figure.** Metrics are reported per source. A
+  recovery rate mixing model judgments and static templates is misleading
+  presented as a single number.
+- **Surface `abstained`.** A task that declined to answer and routed to human
+  review is a deliberate, correct outcome — render it as such, not as an error
+  or an empty cell.
 
 ### Money and time
 

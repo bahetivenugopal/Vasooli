@@ -45,13 +45,13 @@ Minimum viable record. Adding fields is fine; removing any of these is not.
 | `outcome` | enum | yes | How it turned out. See below |
 | `reason_code` | str | yes | Normalized code from `decline-taxonomy`, or a policy reason code |
 | `authorising_rule` | str | yes | **The citation.** See "Rule citation format" |
-| `decision_source` | enum | yes | `policy` \| `model` \| `hybrid` — was this a table lookup or a judgment call? |
+| `provenance` | object | yes | How the decision was produced. See "Provenance" below. **Replaces the old `decision_source` field** — keep one, not both |
 | `rationale` | text | yes | Human-readable why, one or two sentences |
 | `amount_paise` | int | no | Integer paise. Never floats for money |
 | `currency` | str | no | `INR` |
 | `attempt_number` | int | no | Which attempt in the schedule this was |
 | `attempts_remaining` | int | no | Budget left after this decision — makes boundedness visible at a glance |
-| `model_confidence` | float | no | Required whenever `decision_source` is `model` or `hybrid` |
+| `model_confidence` | float | no | Required whenever `provenance.source` is `model`. Distinct from provenance: it describes the *answer*, not how it was produced |
 | `metadata` | JSON | no | Engine-specific extras. Never put a required field in here |
 
 ### `action` values
@@ -100,21 +100,62 @@ Examples:
 If no rule id exists for a decision, the correct fix is to **add a named rule to
 the relevant skill**, not to invent a citation string at the call site.
 
-## Recording model-derived decisions honestly
+## Provenance
 
-When Claude made the judgment rather than a lookup table:
+Every entry carries a `provenance` object. Full contract in the `llm-provider`
+skill — **the two files must agree exactly.**
 
-- `decision_source` = `model` (or `hybrid` when a model call was constrained by
-  policy bounds — which is the common case, and the one worth showing off)
-- `model_confidence` populated
-- `rationale` carries the model's actual stated reasoning, not a template
-- `authorising_rule` still points at the policy rule that **permitted** the model
-  to act, and at the bound it operated inside
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `source` | enum | yes | `model` \| `deterministic`. **The most important field in the entry** — it says whether a judgment was *reasoned* or *ruled* |
+| `provider` | str | yes | Exactly what produced it, e.g. `gemini`. `deterministic` for fallbacks |
+| `model` | str | yes | Exactly which model. Null for deterministic results |
+| `cache_hit` | bool | yes | Whether it came from cache rather than a live call. A cached result is still `source: model` |
+| `prompt_version` | str | yes | Which prompt produced it. Null for deterministic results |
+| `abstained` | bool | yes | Whether the task declined to answer and routed to human review |
+| `latency_ms` | int | no | **Null for deterministic results** |
+| `tokens` | int | no | **Null for deterministic results** |
+
+> **Nothing model-derived may appear anywhere in the system without this object
+> attached** — not in an audit entry, not in an API response, not on the
+> dashboard, not in a reported metric.
+
+### Purely mechanical decisions
+
+A decision taken straight from a lookup table, with no model involved and no
+fallback invoked, is still `source: deterministic` with `provider:
+deterministic`. There is no third value. The question the field answers is
+"was this reasoned or ruled?", and a table lookup was ruled.
+
+### Abstention
+
+When a task declines to answer rather than guess — the Engine 3 promise-extraction
+fallback being the designed case — record it as `action: escalate`,
+`outcome: escalated`, `provenance.abstained: true`, `source: deterministic`.
+
+An abstention is a *successful* outcome for that task, not a failure. Fabricating
+a promise-to-pay would suppress a legitimate chase and corrupt the promise
+register, so refusing is the correct behaviour and the trail should show it as
+deliberate.
+
+### Reporting rule
+
+**Metrics are reported per source.** Never blend model-derived and rule-derived
+results into a single figure that implies more than it delivers.
+
+A recovery rate where half the decisions came from static templates is not a
+false number, but presented as one figure it is a misleading one. Split it.
+
+### The split that matters
+
+Whatever the source, `authorising_rule` still points at the policy rule that
+**permitted** the action, and at the bound it operated inside.
 
 The model is never the authority for whether an action was *allowed*. It supplies
 judgment; `policy_engine.py` supplies permission. The audit trail must make that
-split visible, because it is the difference between "an agent that tries stuff"
-and a bounded recovery system.
+split visible — it is the difference between "an agent that tries stuff" and a
+bounded recovery system, and it holds regardless of which provider is behind the
+reasoning layer.
 
 ## Writing rules
 
@@ -132,5 +173,7 @@ and a bounded recovery system.
 
 - `/audit-check` — validates every entry has a reason code and a citing rule
 - `/run-batch-demo` — computes the recovery-rate summary from these entries, so
-  the headline number and the audit trail cannot disagree
-- The control tower dashboard — renders the per-entity decision timeline
+  the headline number and the audit trail cannot disagree. Reports **per
+  `provenance.source`**, never blended
+- The control tower dashboard — renders the per-entity decision timeline,
+  showing `provenance.source` on every decision

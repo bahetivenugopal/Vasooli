@@ -70,7 +70,7 @@ writes an audit entry with `action = block_attempt` (or `halt_schedule`),
 
 ### You bound the model; the model does not bound you
 
-`claude_agent.py` supplies **judgment** — root-cause diagnosis, ambiguous decline
+`llm_agent.py` supplies **judgment** — root-cause diagnosis, ambiguous decline
 classification, message drafting. You supply **permission**. A model call may
 recommend an action; only the policy engine authorises it, and the recommendation
 is evaluated against the same gates as any other proposed action.

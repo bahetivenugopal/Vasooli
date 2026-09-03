@@ -16,8 +16,8 @@ Synthetic data generator (transactions, mandates, invoices)
                                    │
                     ┌──────────────┼──────────────┐
                     │         Shared core         │
-                    │  policy engine · Claude agent│
-                    │       · audit trail          │
+                    │  policy engine · LLM agent  │
+                    │       · audit trail         │
                     └──────────────┬──────────────┘
                                    │
                      ┌─────────────┴─────────────┐
@@ -50,7 +50,7 @@ subscriptions, and receivables.
 | Module | Responsibility | Rule |
 | --- | --- | --- |
 | `policy_engine.py` | Is this allowed? Is it retryable? What's next? Has a stop fired? | The **only** thing permitted to answer those. Every branch cites a named rule from a skill |
-| `claude_agent.py` | Genuine LLM judgment — root-cause diagnosis, ambiguous decline classification, message drafting, promise-to-pay extraction | Supplies judgment, never permission |
+| `llm_agent.py` | Genuine LLM judgment — root-cause diagnosis, ambiguous decline classification, message drafting, promise-to-pay extraction. Google Gemini behind a thin provider interface, with caching, rate-limit backoff, versioned prompts, and a registered deterministic fallback per task | Supplies judgment, never permission |
 | `audit_trail.py` | The single append-only decision record | Every entry cites the rule that authorised it, refusals included |
 | `razorpay_client.py` | Every Razorpay call, and error normalization | Engines never see a raw upstream string |
 
@@ -59,13 +59,52 @@ subscriptions, and receivables.
 The split that makes this a bounded recovery system rather than "an agent that
 tries stuff":
 
-- **`claude_agent.py` proposes.** It diagnoses, classifies, drafts.
+- **`llm_agent.py` proposes.** It diagnoses, classifies, drafts.
 - **`policy_engine.py` disposes.** It authorises, or refuses.
 
 A model response can never widen a bound. If the model recommends a fifth retry
 where the budget is four, the answer is no — and the refusal is audited, citing
-the rule that produced it. `decision_source` on every audit entry records which
-of the two made the call, so the split is visible rather than asserted.
+the rule that produced it. The `provenance` object on every audit entry records
+which of the two made the call, so the split is visible rather than asserted.
+This holds regardless of which provider sits behind the reasoning layer.
+
+## The reasoning layer
+
+*Not built yet.* Google Gemini (`gemini-3.1-flash-lite` by default), reached
+through a thin provider interface — one interface, one implementation, no
+registry or plugin machinery. Engines call the interface; they never touch the
+SDK. Full contract in the `llm-provider` skill.
+
+Four properties matter:
+
+| Property | Why |
+| --- | --- |
+| **Response caching** | Keyed on resolved prompt + model + prompt version, persisted to `LLM_CACHE_PATH`. Stops re-runs and pre-demo seed runs from burning the daily free-tier quota, and makes a batch reproducible without re-spending it |
+| **Rate-limit backoff** | `429` retried at 1s, 2s, 4s. Free-tier limits bite per minute, not just per day, and a tight batch loop will hit them |
+| **Deterministic fallbacks** | **Every** reasoning task registers one, enforced at startup. A batch run always completes, with or without a provider |
+| **Versioned prompts** | Prompts are files under `services/prompts/` with version ids that flow into provenance, so any metric traces to the prompt that produced it |
+
+### Fallbacks degrade deliberately
+
+Boring where boring is safe; abstaining where being wrong is expensive.
+
+- **Root-cause diagnosis** falls back to classifying from the decline-code
+  distribution, and escalates to human review under ambiguity.
+- **Dunning drafting** falls back to static per-failure-class templates. A plain,
+  accurate message costs almost nothing in quality.
+- **Promise extraction abstains entirely** — no regex, no keyword heuristic, no
+  partial guess. Fabricating a promise-to-pay would suppress a legitimate chase
+  and corrupt the promise register, so refusing is the correct answer.
+
+### Provenance
+
+Every reasoning result carries `source` (`model` or `deterministic`), `provider`,
+`model`, `cache_hit`, `prompt_version`, `abstained`, and `latency_ms` / `tokens`
+(null for deterministic results). Nothing model-derived appears anywhere in the
+system without it, and **metrics are reported per source, never blended**.
+
+That the system completes a full run with no API key at all — on audited
+fallbacks — is a design goal, not a degraded mode.
 
 ## Error normalization — the one-way boundary
 
@@ -87,9 +126,10 @@ specific card.
 synthetic batch (seeded, batch_id)
    → engine ingest
    → engine asks policy_engine: is this action allowed?
-        ├─ needs judgment? → claude_agent → back through policy_engine
+        ├─ needs judgment? → llm_agent (or its deterministic fallback)
+        │                    → back through policy_engine
         └─ decision object: action · reason_code · authorising_rule ·
-                            attempts_remaining · rationale
+                            attempts_remaining · rationale · provenance
    → audit_trail.write(...)          # BEFORE any external side effect
    → engine calls a bounded action from its own actions.py
         └─ razorpay_client → Razorpay test-mode API
@@ -134,7 +174,8 @@ successes — they are the compliance evidence.
 
 - No Kubernetes, no Docker Compose
 - No splitting engines into microservices — one FastAPI app, separated by folder
-- No custom agent framework over the Anthropic API
+- No custom agent framework over the provider SDK
+- No provider registry or plugin machinery — one interface, one implementation
 - No Postgres migration
 - No checkout drop-off recovery (out of scope)
 - Hinglish voice only as an optional bonus channel on Engine 2's notification

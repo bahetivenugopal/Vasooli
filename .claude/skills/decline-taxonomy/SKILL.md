@@ -108,14 +108,19 @@ mode this taxonomy exists to prevent.
 Procedure:
 
 1. Normalize to `UNKNOWN`.
-2. Route to `claude_agent.py` for classification **with this table in context**.
+2. Route to `llm_agent.py` for classification **with this table in context**.
    This is a genuine judgment call, and one of the places the LLM earns its place
    in the system.
-3. Write to the audit trail: the assigned class, the model's stated confidence,
-   and an explicit flag that the classification was model-derived rather than
-   table-derived.
+3. Write to the audit trail with a full `provenance` object — the assigned class,
+   the model's stated confidence, and `provenance.source` recording whether the
+   classification was reasoned (`model`) or ruled (`deterministic`). See the
+   `audit-schema` and `llm-provider` skills.
 4. **If confidence is low, treat as HARD.** The safe direction of error is
    "stop", never "keep retrying".
+5. **If the provider is unavailable** — no key, deterministic mode, rate-limited
+   beyond backoff, or unparseable output twice — the registered fallback applies
+   and `UNKNOWN` is treated as **HARD**, audited as `source: deterministic`.
+   Same direction of error, arrived at without a model.
 
 ## Mapping from upstream
 

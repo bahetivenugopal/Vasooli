@@ -61,8 +61,16 @@ Before any claim ships, check it against the code:
 - **Never cherry-pick a batch.** If the honest number is less impressive, use the
   honest number. Reproducibility is the differentiator; a number a judge can
   regenerate is worth more than a bigger one they cannot.
-- Say "genuine Claude reasoning, not rules dressed up as AI" **only** where an
-  actual model call makes an actual judgment.
+- Say "genuine model reasoning, not rules dressed up as AI" **only** where an
+  actual model call makes an actual judgment. The runtime reasoning provider is
+  **Google Gemini** — do not describe the product as Claude-powered. (Claude Code
+  is the *development* tool; that distinction is worth keeping straight in the
+  write-up, and the build-workflow story is legitimately about Claude Code.)
+- **Report metrics per source.** Every reasoning result records whether it was
+  *reasoned* by the model or *ruled* by a deterministic fallback. Never blend the
+  two into one figure that implies more than it delivers. That the system
+  completes a full run with no API key at all, on audited fallbacks, is a
+  strength worth stating plainly — not a limitation to hide.
 
 If a claim is not yet true, the fix is to build it or to cut the claim.
 

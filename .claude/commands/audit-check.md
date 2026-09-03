@@ -24,7 +24,7 @@ rules are real.
 
 1. **Required fields present** on every entry: `timestamp`, `batch_id`, `engine`,
    `entity_type`, `entity_id`, `action`, `outcome`, `reason_code`,
-   `authorising_rule`, `decision_source`, `rationale`.
+   `authorising_rule`, `provenance`, `rationale`.
 2. **`reason_code` is non-empty** and is a known `decline-taxonomy` code or a
    defined policy reason code.
 3. **`authorising_rule` is non-empty** and matches `<skill-or-module>:<rule-id>`.
@@ -32,8 +32,14 @@ rules are real.
    `rbi-mandate-rules:A4` must actually be a rule in that skill. A citation
    pointing at nothing is worse than no citation, because it looks like rigour.
 5. **`action` and `outcome` are allowed values** from `audit-schema`.
-6. **`model_confidence` is present** wherever `decision_source` is `model` or
-   `hybrid`.
+6. **`provenance` is complete and internally consistent** on every entry:
+   - `source` is `model` or `deterministic` — no other value, never absent
+   - `provider`, `cache_hit`, `prompt_version` and `abstained` all present
+   - `source: deterministic` ⇒ `latency_ms` and `tokens` are **null**, and
+     `model` / `prompt_version` are null
+   - `source: model` ⇒ `model` and `prompt_version` are populated, and
+     `model_confidence` is present on the entry
+   - `abstained: true` ⇒ `action` is `escalate` and `outcome` is `escalated`
 7. **Timestamps are tz-aware UTC**, and non-decreasing within an entity's timeline.
 8. **Money is integer paise** — any float in an amount field is a failure.
 9. **No secrets**: no key material, no full card numbers, anywhere in the trail.
@@ -65,8 +71,10 @@ Rule citations used:
   decline-taxonomy:HARD.*     x<n>
   ...
 
-Decision source split:
-  policy <n> · model <n> · hybrid <n>
+Provenance split:
+  model <n>  (cache hits <n>, live calls <n>)
+  deterministic <n>  (abstentions <n>)
+  by prompt_version: <version> x<n>, ...
 
 Outcomes:
   success <n> · failure <n> · blocked <n> · halted <n> · scheduled <n> · ...

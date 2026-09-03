@@ -89,6 +89,11 @@ next-env.d.ts
 *.tsbuildinfo
 
 # ---------------------------------------------------------------------------
+# LLM response cache (LLM_CACHE_PATH) — local, regenerable, never committed
+# ---------------------------------------------------------------------------
+.llm_cache/
+
+# ---------------------------------------------------------------------------
 # Batch run artifacts
 # ---------------------------------------------------------------------------
 # Generated batches are reproducible from their seed, so outputs stay out of git.

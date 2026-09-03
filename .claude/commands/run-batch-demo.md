@@ -48,8 +48,16 @@ STOPPED — the compliance evidence
 
 CLASSIFICATION
   Soft / Hard / Ambiguous:  <n> / <n> / <n>
-  Model-classified:         <n>  (mean confidence <c>)
   Fail-safe (UNKNOWN→hard): <n>
+
+PROVENANCE — reasoned vs ruled, never blended
+  Reasoned (source=model): <n>   (cache hits <n>, live calls <n>)
+    mean confidence:       <c>
+    recovery rate:         <pct>%
+  Ruled (deterministic):   <n>   (abstentions <n>)
+    recovery rate:         <pct>%
+  Provider / model:        <provider> / <model>
+  Prompt versions:         <version> x<n>, ...
 ```
 
 ## Reporting rules — these matter more than the numbers
@@ -59,6 +67,11 @@ CLASSIFICATION
   about the engines worth acting on.
 - **Always print the seed and `batch_id`.** A recovery number without them is
   unverifiable and therefore worthless to a judge.
+- **Report per `provenance.source`, never blended.** A single recovery rate
+  mixing model judgments and deterministic fallbacks implies more than it
+  delivers. Print both, split, and say which provider and model produced the
+  reasoned half. A run completed entirely on fallbacks is a valid run — label it
+  as such rather than presenting it as reasoned.
 - **Show the stops as prominently as the recoveries.** Blocked and halted
   outcomes are the proof that escalation is bounded. A run with zero blocks means
   either the batch has no edge cases or the gate is not firing — investigate,

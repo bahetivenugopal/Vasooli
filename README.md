@@ -20,7 +20,7 @@ Businesses lose revenue in three distinct, quietly compounding ways: a payment
 corridor degrades and nobody notices, a recurring mandate or subscription charge
 fails and the customer never meant to churn, or a B2B invoice goes overdue and
 just sits there. Vasooli is one shared recovery engine — one policy layer, one
-Claude-powered reasoning layer, one audit trail — applied to all three leak
+Gemini-powered reasoning layer, one audit trail — applied to all three leak
 points, so every recovery action is bounded, explainable, and provably compliant,
 not just "an agent that tries stuff".
 
@@ -57,8 +57,8 @@ Synthetic data generator (transactions, mandates, invoices)
                                    │
                     ┌──────────────┼──────────────┐
                     │         Shared core         │
-                    │  policy engine · Claude agent│
-                    │       · audit trail          │
+                    │  policy engine · LLM agent  │
+                    │       · audit trail         │
                     └──────────────┬──────────────┘
                                    │
                      ┌─────────────┴─────────────┐
@@ -69,7 +69,7 @@ Synthetic data generator (transactions, mandates, invoices)
 **The one structural fact:** an engine's own code is almost entirely about *what
 data it ingests* and *what recovery actions it may call*. The judgment — is this
 retryable, what's the root cause, what's the next bounded action, log it — always
-routes through the same `policy_engine.py`, `claude_agent.py`, and
+routes through the same `policy_engine.py`, `llm_agent.py`, and
 `audit_trail.py`. The hard part is built once.
 
 More detail in [docs/architecture.md](docs/architecture.md).
@@ -81,7 +81,7 @@ More detail in [docs/architecture.md](docs/architecture.md).
 | Frontend | Next.js 14 (App Router), TypeScript, Tailwind, shadcn/ui, Recharts |
 | Backend | Python 3.12, FastAPI, Pydantic v2 |
 | Database | SQLite via SQLAlchemy (zero-setup; connection-string swap for Postgres later) |
-| Reasoning | Anthropic Claude, Messages API, real tool-calling |
+| Reasoning | Google Gemini (`gemini-3.1-flash-lite`) via `google-genai`, behind a thin provider interface, with a deterministic fallback per task |
 | Payments | Official `razorpay` Python SDK — **test-mode keys only, always** |
 | Testing | Pytest, focused on `policy_engine.py` |
 | Lint | Ruff · ESLint + Prettier |
@@ -93,6 +93,28 @@ git clone https://github.com/bahetivenugopal/Vasooli.git
 cd Vasooli
 cp .env.example .env          # then fill in your test-mode keys
 ```
+
+**You can run this with no API keys at all.** Set `LLM_DETERMINISTIC_ONLY=true`
+(or just leave `GEMINI_API_KEY` blank) and every reasoning task takes its
+registered deterministic fallback instead of calling the provider. A full batch
+run completes either way, and every fallback result is audited as
+`source: deterministic` so it is never mistaken for model reasoning.
+
+Environment variables:
+
+| Variable | Purpose |
+| --- | --- |
+| `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` | Razorpay **test-mode** credentials |
+| `RAZORPAY_WEBHOOK_SECRET` | Optional, webhook signature verification |
+| `GEMINI_API_KEY` | Reasoning provider credential. Blank ⇒ deterministic mode |
+| `GEMINI_MODEL` | Defaults to `gemini-3.1-flash-lite` |
+| `LLM_DETERMINISTIC_ONLY` | Skip the provider entirely, use fallbacks throughout |
+| `LLM_CACHE_PATH` | Where cached provider responses are persisted |
+| `DATABASE_URL` | SQLite path; swap for Postgres later |
+| `DEMO_SEED` | Default seed for the synthetic batch generator |
+
+**All data in this project is synthetic.** Nothing here touches a real customer,
+a real invoice, or a real rupee — Razorpay is used in test mode only.
 
 **API** (from `apps/api/`) — requires **Python 3.12**:
 
@@ -122,7 +144,7 @@ npm run dev
                    and commands — the build's own tooling
 apps/api/          FastAPI backend
   app/engines/     one folder per engine
-  app/services/    the shared core: razorpay_client · claude_agent
+  app/services/    the shared core: razorpay_client · llm_agent
                    policy_engine · audit_trail
 apps/web/          Next.js control tower dashboard
 data/generators/   seeded, reproducible synthetic batches
@@ -137,6 +159,10 @@ Every recovery figure this project reports is computed from its own **seeded,
 reproducible** synthetic batch, and is always published with its `batch_id` and
 seed so it can be regenerated and checked. No batch is cherry-picked. A number
 that can be verified is worth more than a bigger one that cannot.
+
+Figures are also reported **per source**. Every reasoning result records whether
+it was *reasoned* by the model or *ruled* by a deterministic fallback, and the
+two are never blended into a single figure that implies more than it delivers.
 
 ## Compliance grounding
 

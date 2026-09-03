@@ -8,7 +8,7 @@ Businesses lose revenue in three distinct, quietly compounding ways: a payment
 corridor degrades and nobody notices, a recurring mandate or subscription charge
 fails and the customer never meant to churn, or a B2B invoice goes overdue and
 just sits there. Vasooli is one shared recovery engine — one policy layer, one
-Claude-powered reasoning layer, one audit trail — applied to all three leak
+Gemini-powered reasoning layer, one audit trail — applied to all three leak
 points, so every recovery action is bounded, explainable, and provably compliant,
 not just "an agent that tries stuff".
 
@@ -41,12 +41,12 @@ capabilities absorbing **five** of the track's seven example directions:
    (insufficient funds → dun that customer) or a *corridor-wide problem* (an
    issuing bank's rail degrading → reroute all affected traffic). Same decline
    code, opposite correct responses. This is the most genuinely agentic call in
-   the build and must be a real Claude reasoning call, never a hardcoded if/else.
+   the build and must be a real model reasoning call, never a hardcoded if/else.
 2. **Mandate & Subscription Recovery** — classifies every failed recurring charge
    soft vs hard; retries soft declines inside RBI's actual compliance windows;
    routes hard declines straight to dunning instead of burning retry attempts.
 3. **B2B Receivables Chaser** — escalating-but-never-harassing reminders, extracts
-   promise-to-pay commitments from free-text replies (a real Claude
+   promise-to-pay commitments from free-text replies (a real model
    text-understanding task), and escalates only **broken** promises, on a capped
    ladder.
 
@@ -65,8 +65,8 @@ Synthetic data generator (transactions, mandates, invoices)
                                    │
                     ┌──────────────┼──────────────┐
                     │         Shared core         │
-                    │  policy engine · Claude agent│
-                    │       · audit trail          │
+                    │  policy engine · LLM agent  │
+                    │       · audit trail         │
                     └──────────────┬──────────────┘
                                    │
                      ┌─────────────┴─────────────┐
@@ -77,7 +77,7 @@ Synthetic data generator (transactions, mandates, invoices)
 An engine's own code is almost entirely about **what data it ingests** and **what
 recovery actions it may call**. The judgment — is this retryable, what's the root
 cause, what's the next bounded action, log it — **always** routes through
-`services/policy_engine.py`, `services/claude_agent.py`, and
+`services/policy_engine.py`, `services/llm_agent.py`, and
 `services/audit_trail.py`.
 
 **Build the hard part once.** An engine that reimplements decision logic is a bug.
@@ -91,7 +91,7 @@ Final. Do not deviate without a documented reason in `docs/adr/`.
 | Frontend | Next.js 14 (App Router), TypeScript, Tailwind CSS, shadcn/ui, Recharts |
 | Backend | **Python 3.12** (pinned — see `.python-version` and ADR 0001), FastAPI, Pydantic v2 |
 | Database/ORM | SQLite via SQLAlchemy (zero-setup; a connection-string swap gets you Postgres later — don't build that now) |
-| Agent/reasoning | Anthropic Claude, Messages API, real tool-calling — the actual product intelligence, and it must be genuine LLM judgment, not rules dressed up as AI |
+| Agent/reasoning | **Google Gemini** (`gemini-3.1-flash-lite`) via `google-genai`, behind a thin provider interface — the actual product intelligence, and it must be genuine LLM judgment, not rules dressed up as AI. Every reasoning task has a registered deterministic fallback, so a batch always completes. See the `llm-provider` skill and ADR 0002 |
 | Payments | Official `razorpay` Python SDK; direct `httpx` only for what the SDK doesn't cover; **test-mode keys only, always** |
 | Testing | Pytest, focused heavily on `policy_engine.py` — the credibility backbone of the submission |
 | Lint/format | Ruff (Python), ESLint + Prettier (TypeScript) |
@@ -99,7 +99,7 @@ Final. Do not deviate without a documented reason in `docs/adr/`.
 
 **Explicitly not doing:** no Kubernetes or Docker Compose, no splitting engines
 into microservices (one FastAPI app, separated by folder), no custom agent
-framework over the Anthropic API. All three are premature complexity with zero
+framework over the provider SDK. All three are premature complexity with zero
 payoff for judges in a ~30-hour build.
 
 ## Folder conventions
@@ -109,8 +109,9 @@ apps/web/src/components/ui/        shadcn primitives — the ONE source of truth
 apps/web/src/components/features/  Vasooli-specific composed components
 apps/api/app/engines/<name>/       one folder per engine, same internal shape
 apps/api/app/services/             the shared core, literally:
-                                     razorpay_client.py · claude_agent.py
+                                     razorpay_client.py · llm_agent.py
                                      policy_engine.py   · audit_trail.py
+apps/api/app/services/prompts/     versioned prompt files
 apps/api/app/tests/                pytest
 data/generators/                   seeded synthetic data
 data/samples/                      committed sample batches
@@ -139,6 +140,7 @@ Context** rather than vague instructions.
 | `decline-taxonomy` | any decline handling, retry eligibility, or dunning routing |
 | `rbi-mandate-rules` | anything in Engine 2, any retry scheduler, any compliance gate |
 | `audit-schema` | `audit_trail.py`, or adding any engine action |
+| `llm-provider` | any code that calls a model, registers a reasoning task, or reads a reasoning result |
 | `conventional-commits` | any commit |
 
 `.claude/commands/` — `/new-engine` · `/run-batch-demo` · `/audit-check`
@@ -154,12 +156,19 @@ Context** rather than vague instructions.
    unknown decline with low confidence is treated as hard. The safe direction of
    error is always "do less".
 4. **The model supplies judgment; the policy engine supplies permission.** A model
-   response never widens a bound.
-5. **Test-mode Razorpay keys only.** Never commit `.env`. If a live key ever
+   response never widens a bound. True whatever the provider is.
+5. **Every reasoning task registers a deterministic fallback.** A task without one
+   fails at **startup**, not at runtime. The project must complete a full batch
+   run with no API key at all — that is a feature, not a degraded mode.
+6. **Nothing model-derived appears anywhere without a `provenance` object**, and
+   metrics are reported **per source**. Never blend reasoned and ruled results
+   into one figure that implies more than it delivers.
+7. **Test-mode Razorpay keys only.** Never commit `.env`, and never put a real
+   credential in `.env.example` — it is a committed file. If a live key ever
    appears anywhere, stop and rotate it.
-6. **Reproducibility.** Every batch is seeded; every reported number carries its
+8. **Reproducibility.** Every batch is seeded; every reported number carries its
    `batch_id` and seed. Never cherry-pick a batch — an honest smaller number beats
    an unverifiable bigger one.
-7. **Report honestly.** If tests fail, say so with output. If a step was skipped,
+9. **Report honestly.** If tests fail, say so with output. If a step was skipped,
    say that. The "Build Challenges" write-up comes from real git history — which
    makes the git log a submission artifact, so commit messages must be true.
