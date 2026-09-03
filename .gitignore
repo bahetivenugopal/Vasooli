@@ -1,0 +1,117 @@
+# ---------------------------------------------------------------------------
+# Secrets — never commit these
+# ---------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# ---------------------------------------------------------------------------
+# Python
+# ---------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+develop-eggs/
+downloads/
+eggs/
+.eggs/
+lib60/
+parts/
+sdist/
+wheels/
+*.egg-info/
+*.egg
+.installed.cfg
+MANIFEST
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+# NOTE: .python-version is deliberately committed — it pins the interpreter.
+
+# Tooling caches
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.dmypy.json
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+.tox/
+.nox/
+.hypothesis/
+
+# ---------------------------------------------------------------------------
+# Databases — SQLite lives locally, never in git
+# ---------------------------------------------------------------------------
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# ---------------------------------------------------------------------------
+# Node / Next.js
+# ---------------------------------------------------------------------------
+node_modules/
+.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/releases
+!.yarn/plugins
+!.yarn/versions
+
+.next/
+out/
+build
+.swc/
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Testing
+/coverage
+
+# Vercel / typegen
+.vercel
+next-env.d.ts
+*.tsbuildinfo
+
+# ---------------------------------------------------------------------------
+# Batch run artifacts
+# ---------------------------------------------------------------------------
+# Generated batches are reproducible from their seed, so outputs stay out of git.
+# Committed reference batches under data/samples/ are the deliberate exception.
+data/output/
+*.batch.json
+!data/samples/**
+
+# ---------------------------------------------------------------------------
+# Editors & OS
+# ---------------------------------------------------------------------------
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+*~
+
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ---------------------------------------------------------------------------
+# Local Claude Code settings (shared .claude/ config IS committed)
+# ---------------------------------------------------------------------------
+.claude/settings.local.json

@@ -1,0 +1,33 @@
+# Vasooli API — Python 3.12 (pinned; see .python-version at the repo root)
+#
+#   python -m venv .venv
+#   .venv\Scripts\activate          (Windows)
+#   source .venv/bin/activate       (macOS/Linux)
+#   pip install -r requirements.txt
+
+# --- Web framework ---------------------------------------------------------
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+
+# --- Validation & settings (Pydantic v2) -----------------------------------
+pydantic==2.10.4
+pydantic-settings==2.7.0
+
+# --- Database --------------------------------------------------------------
+SQLAlchemy==2.0.36
+
+# --- Payments --------------------------------------------------------------
+# Test-mode keys only. See .claude/skills/razorpay-api/SKILL.md
+razorpay==1.4.2
+httpx==0.28.1
+
+# --- Reasoning layer -------------------------------------------------------
+anthropic==0.42.0
+
+# --- Utilities -------------------------------------------------------------
+python-dotenv==1.0.1
+
+# --- Dev: testing & lint ---------------------------------------------------
+pytest==8.3.4
+pytest-asyncio==0.25.0
+ruff==0.8.4

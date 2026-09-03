@@ -1,0 +1,65 @@
+# Normalise line endings.
+#
+# Without this, each machine's core.autocrlf setting decides how files are
+# checked out, so the same file differs between clones and diffs fill with
+# whole-file line-ending churn. Declaring it here makes the repo authoritative
+# and overrides whatever autocrlf each developer has set.
+#
+# Rule: LF in the repository AND in the working tree, everywhere.
+
+* text=auto eol=lf
+
+# --- Explicitly text (LF) --------------------------------------------------
+*.py      text eol=lf
+*.pyi     text eol=lf
+*.toml    text eol=lf
+*.cfg     text eol=lf
+*.ini     text eol=lf
+*.txt     text eol=lf
+*.md      text eol=lf
+*.json    text eol=lf
+*.jsonc   text eol=lf
+*.yml     text eol=lf
+*.yaml    text eol=lf
+*.ts      text eol=lf
+*.tsx     text eol=lf
+*.js      text eol=lf
+*.jsx     text eol=lf
+*.mjs     text eol=lf
+*.cjs     text eol=lf
+*.css     text eol=lf
+*.scss    text eol=lf
+*.html    text eol=lf
+*.svg     text eol=lf
+*.sql     text eol=lf
+*.sh      text eol=lf
+.env.example text eol=lf
+.gitignore   text eol=lf
+.gitattributes text eol=lf
+
+# --- Windows scripts genuinely need CRLF -----------------------------------
+*.bat     text eol=crlf
+*.cmd     text eol=crlf
+*.ps1     text eol=crlf
+
+# --- Binary: never touch, never diff ---------------------------------------
+*.png     binary
+*.jpg     binary
+*.jpeg    binary
+*.gif     binary
+*.ico     binary
+*.webp    binary
+*.pdf     binary
+*.woff    binary
+*.woff2   binary
+*.ttf     binary
+*.otf     binary
+*.eot     binary
+*.zip     binary
+*.gz      binary
+*.db      binary
+*.sqlite  binary
+*.sqlite3 binary
+
+# --- Generated: collapse in diffs and PR reviews ---------------------------
+package-lock.json linguist-generated=true
