@@ -287,3 +287,124 @@ claim:
 No detection logic, no recovery logic, no scoring — generators produce data and
 never judge it. No engine code, no frontend, no deployment. Commits were left to
 the user.
+
+---
+
+## Phase 3 — Engine 1: Root-Cause Recovery
+
+**Status:** complete · **Date:** 2026-09-04
+**Verified by:** 242 pytest passing (71 new), `ruff check` clean from the repo
+root *and* from `apps/api/`, a full live-provider batch run, a full no-provider
+run, and `/audit-check` passing with 0 violations over 110 entries.
+
+### What now exists
+
+`apps/api/app/engines/root_cause/` — the first engine, in seven modules that map
+one-to-one onto the loop:
+
+- `config.py` + `config.json` — corridor levels and thresholds, each citing a rule
+- `dataset.py` — reads the payments `.jsonl`, **refuses a manifest path**
+- `detection.py` — segmentation and statistics. No model, ever
+- `diagnosis.py` — the `diagnose_corridor` task, prompt, and fallback
+- `recovery.py` — the four bounded actions, each authorised first
+- `scoring.py` — precision/recall/latency vs ground truth. The **only** module
+  that opens a manifest
+- `runner.py` — the loop, and a summary recomputed from the audit trail
+
+Plus: a new `corridor-detection` skill, four new policy rules, two new tables
+(`corridor_detections`, `corridor_reroutes`), eight API routes under
+`/api/v1/root-cause/`, `scripts/root_cause_demo.py`, ADRs 0006 and 0007, and
+`docs/metrics/engine-1-root-cause.md`.
+
+### The measured result, in one line
+
+Recall 100% / precision 66.7% on seed 42 (2 of 2 ground-truth events found, one
+honest false positive), 64% / 70% across five seeds, decoy never fires. Recovery
+rate 34.75% of Rs 5,25,206 at risk. 11 policy denials, 2 of them overruling the
+model. Full numbers, including what underperformed, are in
+`docs/metrics/engine-1-root-cause.md` — **quote that file, not this line.**
+
+### Deviations from the phase file, and why
+
+| # | Deviation | Why it happened |
+| --- | --- | --- |
+| 1 | **Added a new skill, `corridor-detection`** | Section 5.1 requires a named minimum-volume threshold, a corridor definition, and a reroute expiry. None of `decline-taxonomy`, `rbi-mandate-rules` or `policy-bounds` covers any of them, and writing them inline would have broken non-negotiable #1. Same precedent as Phase 1's `policy-bounds`. Rule ids: `CS1`, `BW1/2`, `MV1/2`, `ST1/2`, `DX1/2`, `RR1/2/3`, `ES1`. |
+| 2 | **`authorize()` no longer overwrites `rule_id` with `policy_engine:llm_authority.denied`** | Found while reading the first real batch: *every* overruled denial cited that same generic string, so the trail could not answer "which rule stopped this?". The citation now stays specific (`policy-bounds:HE1`, `corridor-detection:RR3`, an attempt cap) and the authority rule moves to a new `PolicyDecision.authority_rule_id`, surfaced through `override_metadata()` into audit metadata. **This changed a Phase 1 test**, deliberately. |
+| 3 | **Corridor and `api_call` entries carry `amount_at_risk_paise = 0`** | The first run reported Rs 9,74,580 at risk against a true Rs 5,25,206 — the same money counted on the payment entry, again on the corridor covering it, and a third time on the Razorpay call. The money lives on the payment entry only; a corridor's value at risk goes in metadata. **Engines 2 and 3 must follow this or the batch denominator inflates the same way.** |
+| 4 | **"Suppressed" and "deferred" are separate counts** | Section 5.4 asks for suppressions as a headline number. A cooldown block is not a suppression — the revenue is still recoverable, only the timing was wrong. Conflating them would have reported 9 "wasted attempts avoided" where the honest figure is 4. |
+| 5 | **`issuer_method_route` segmentation is in the config but disabled** | Section 5.1 wants granularity discussable rather than assumed. At 589 attempts it splits the stream into 37 buckets that never clear the baseline guard, so it detects nothing and adds 37 more chances at a false positive. Left visible and off, with the reasoning in ADR 0007. |
+| 6 | **A reroute does not change any retry's success probability** | Section 5.3 wants rerouting as a real action, and it is — authorised, bounded, expiring, audited. But `retry_model.py` has no route dimension, so an uplift for "we rerouted" would be inventing the headline number. The reroute is recorded on affected retries as `rerouted_to` and contributes **zero** to the recovery figure. Stated in the metrics doc rather than buried. |
+| 7 | **The unknown-decline reasoning task is not called by this engine** | The phase file does not ask for it, and the only honest wiring (letting a classification change the retry budget) would have needed an invented number for the post-classification cap. `UNKNOWN` fails closed to a budget of 1 through the taxonomy, which is the documented behaviour. Engine 2 should revisit — it has more unknowns to classify. |
+| 8 | **`PolicyRequest` gained two Engine-1-specific fields** | `corridor_determination` and `alternate_route_available`. Enforcing RR2/RR3 inside the engine instead would have made them intentions rather than gates — an engine can always forget to check. Same shape as the existing `is_outreach` / `abstained` fields. |
+
+### Things a later phase will otherwise get wrong
+
+**`_permit()` is still the only constructor of an allowed decision, and
+`authorize()` still cannot reach it.** Deviation #2 changed which rule a denial
+cites, not who can permit. Do not "simplify" `authority_rule_id` back into
+`rule_id`.
+
+**The run's `now` comes from the data, not the clock.** `RootCauseRunner.run()`
+defaults `now` to the last attempt's timestamp. Phase 2's warning about the fixed
+`as_of` is real, and this is how Engine 1 answered it — engines may not read the
+manifest, so the anchor has to be derived from the records. Engines 2 and 3 have
+a harder version of the same problem: their datasets are built around
+`2026-09-01T09:00+05:30` and a mandate's `next_debit_at` is in the *future*
+relative to it, so "last record timestamp" will not be the right default there.
+**Take `now` as an explicit input and default it deliberately.**
+
+**A detection is scored against ground truth by strict corridor match.**
+`scoring.py` compares only the fields the manifest's corridor names, and a
+detection that sets a field the truth left null does not match. A detection on
+the right method but the wrong issuer is a false positive, not partial credit.
+Do not loosen this to make a number look better.
+
+**Every corridor-level decision goes through `authorize()`; every payment-level
+one through `evaluate()`.** The corridor is where a model recommendation exists;
+per-payment recovery is entirely rule-driven and calls no model. That is why the
+live run and the `--deterministic` run produce *identical* recovery figures — say
+so when quoting them together, or the model appears to have earned the number.
+
+**`RecoveryService` takes the `Session` as well as the `AuditTrail`.** It writes
+reroute rows through the same session the trail commits on, so the directive and
+the entry authorising it land together. Do not reach into `trail._db`.
+
+**Two things are called confidence and they are never combined.**
+`Detection.confidence` is `1 - p_value`, statistical. `model_confidence` is the
+model's own. Averaging them would produce a number that means nothing; the run
+summary reports them separately, and so should the dashboard.
+
+**Extra seeds are generated inside the test run, not committed.**
+`test_root_cause_detection.py` regenerates seeds 7/13/101/2026 through the same
+CLI path the foundry uses. That keeps the diff small, but it means those tests do
+real work — if a generator signature changes, they break first.
+
+### Observations worth carrying forward
+
+- **Phase 1's "the model always returns confidence 1.0" worry does not hold.** On
+  the genuinely ambiguous corridor the live model returned **0.55**, below the 0.6
+  floor, so the deterministic classifier took over — an unforced demonstration of
+  `corridor-detection:DX1` firing. The confidence signal carries information. Still
+  worth watching over more than three calls.
+- **A result rejected by the confidence floor is not cached.** `LLMAgent.run()`
+  returns the fallback before `cache.put()`, so that call is re-made on every run.
+  Not wrong — caching a rejected answer is arguable — but "a seeded re-run is free"
+  has an exception, and the pre-demo run should not assume zero live calls.
+- **The false-positive detection was still diagnosed `systemic`.** The diagnosis
+  layer is asked *why* a corridor degraded and has no way to say "it did not". It
+  was refused for an unrelated reason (`RR3`, no alternate route) — luck, not
+  design. Adding a `not_degraded` determination is cheap and would make the
+  refusal principled. Flagged in ADR 0006's consequences.
+- **The engine imports `data.generators.retry_model`**, exactly as Phase 2
+  predicted. It works, via a lazy import inside `runner.py` so `app` still imports
+  cleanly without the repo root on `sys.path`. Left where it is.
+- **`policy_violations` stayed 0 and `blocked` / `halted` / `escalated` stayed
+  non-zero** on every run, which is the shape Phase 1 said to expect.
+- **The Gemini SDK prints an AFC advisory to stderr on every call.** Cosmetic,
+  from `google-genai`, not from our code. Ignore it, or silence it in Phase 8.
+
+### Not done in this phase (deliberately)
+
+No mandate or subscription logic, no invoice logic, no UI, no live Razorpay
+traffic (simulated mode throughout, and the mode is on every `api_call` entry).
+Commits were left to the user.

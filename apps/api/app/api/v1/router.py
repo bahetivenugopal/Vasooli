@@ -1,18 +1,19 @@
 """v1 API router.
 
-Engine routers are mounted here as each phase lands:
+Engine routers are mounted here as each phase lands. Each router carries its own
+prefix, so mounting one is a single line and nothing else in the app moves:
 
-    api_router.include_router(root_cause.router, prefix="/root-cause")
-    api_router.include_router(mandate_recovery.router, prefix="/mandate-recovery")
-    api_router.include_router(receivables.router, prefix="/receivables")
+    api_router.include_router(mandate_recovery.router)
+    api_router.include_router(receivables.router)
 """
 
 from __future__ import annotations
 
 from fastapi import APIRouter
 
-from app.api.v1.routes import audit, health
+from app.api.v1.routes import audit, health, root_cause
 
 api_router = APIRouter()
 api_router.include_router(health.router)
 api_router.include_router(audit.router)
+api_router.include_router(root_cause.router)

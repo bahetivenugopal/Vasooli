@@ -24,7 +24,13 @@ from app.db.session import engine
 # Imported for the side effect of registering ORM models on `Base` before
 # `create_all()` runs. A table missing because its module was never imported
 # surfaces as a baffling error much later.
-from app.models import AuditEntry, BatchRun  # noqa: F401
+from app.engines.root_cause import register_root_cause_tasks
+from app.models import (  # noqa: F401
+    AuditEntry,
+    BatchRun,
+    CorridorDetection,
+    CorridorReroute,
+)
 from app.services.llm_agent import REGISTRY
 from app.services.reasoning_tasks import register_core_tasks
 
@@ -42,6 +48,7 @@ async def lifespan(app: FastAPI):
     """
     Base.metadata.create_all(bind=engine)
     register_core_tasks()
+    register_root_cause_tasks()
     REGISTRY.verify_all_have_fallbacks()
     yield
 

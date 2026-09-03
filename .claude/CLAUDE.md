@@ -140,6 +140,7 @@ Context** rather than vague instructions.
 | `decline-taxonomy` | any decline handling, retry eligibility, or dunning routing |
 | `rbi-mandate-rules` | anything in Engine 2, any retry scheduler, any compliance gate |
 | `policy-bounds` | any policy rule the other two skills don't cover — quiet hours, backoff, attempt ceiling, escalation triggers |
+| `corridor-detection` | Engine 1 — corridor segmentation, detection thresholds, the minimum-volume guard, reroute expiry |
 | `audit-schema` | `audit_trail.py`, or adding any engine action |
 | `llm-provider` | any code that calls a model, registers a reasoning task, or reads a reasoning result |
 | `conventional-commits` | any commit |

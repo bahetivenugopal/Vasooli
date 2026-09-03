@@ -433,10 +433,18 @@ def test_llm_recommendation_cannot_override_a_policy_denial(policy: PolicyEngine
 
     authorized = policy.authorize(request, _recommendation(Action.SCHEDULE_RETRY))
     assert not authorized.allowed, "an LLM recommendation widened a policy bound"
-    assert authorized.rule_id == "policy_engine:llm_authority.denied"
+    # The citation keeps naming the rule that actually refused, not the generic
+    # authority rule — otherwise every overruled denial in a batch cites the same
+    # string and the trail stops answering "which rule stopped this?".
+    assert authorized.rule_id == denial.rule_id
+    assert authorized.authority_rule_id == "policy_engine:llm_authority.denied"
     # The refusal records what the model wanted. A trail showing the gate
     # overruling a recommendation is the evidence that the gate is real.
     assert authorized.overridden_recommendation == Action.SCHEDULE_RETRY.value
+    assert authorized.override_metadata() == {
+        "overridden_recommendation": Action.SCHEDULE_RETRY.value,
+        "authority_rule": "policy_engine:llm_authority.denied",
+    }
 
 
 @pytest.mark.parametrize(

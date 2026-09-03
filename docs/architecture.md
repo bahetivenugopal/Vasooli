@@ -1,18 +1,17 @@
 # Architecture
 
-> **Status: shared core built (Phase 1).** The four services under
-> `apps/api/app/services/` exist and are tested. The three engines, the
-> synthetic data generator and the dashboard do not yet — sections describing
-> them are marked *not built* and say what they will consume. This file
-> describes real code; it should never present an aspiration as though it
-> shipped.
+> **Status: shared core (Phase 1), synthetic data foundry (Phase 2) and Engine 1
+> (Phase 3) built.** Engines 2 and 3 and the dashboard do not exist yet —
+> sections describing them are marked *not built* and say what they will consume.
+> This file describes real code; it should never present an aspiration as though
+> it shipped.
 
 ## The shape
 
 ```
-Synthetic data generator (transactions, mandates, invoices)     [not built]
+Synthetic data generator (transactions, mandates, invoices)     [BUILT]
         │
-        ├──► Root-cause engine ────┐                           [not built]
+        ├──► Root-cause engine ────┐                           [BUILT]
         ├──► Mandate engine ───────┤                           [not built]
         └──► Receivables engine ───┤                           [not built]
                                    │
@@ -225,6 +224,86 @@ Two properties worth noting:
 
 `scripts/core_loop_demo.py` runs exactly this loop and prints each step.
 
+## Engine 1 — Root-Cause Recovery · `apps/api/app/engines/root_cause/`
+
+The first engine, and the one that most justifies the word "agent": *is this one
+customer's problem, or is an entire corridor down?* The same decline code appears
+in both cases and demands opposite responses.
+
+| Module | Responsibility |
+| --- | --- |
+| `config.py` / `config.json` | Corridor levels and thresholds, each citing a `corridor-detection` rule |
+| `dataset.py` | Reads the payments `.jsonl`. Refuses a manifest path outright |
+| `detection.py` | Corridor segmentation and statistical degradation detection. **No model** |
+| `diagnosis.py` | The reasoning task, its prompt, and its deterministic fallback |
+| `recovery.py` | The four bounded actions, each authorised before it happens |
+| `scoring.py` | Detection accuracy against ground truth. **The only module that reads a manifest** |
+| `runner.py` | The batch loop and the honest summary |
+
+### The data flow
+
+```
+payments .jsonl (records only — never the manifest)
+   │
+   ├─ detection.py ── segment by (issuer × method) and (method × route)
+   │                  rolling 6h window, 2h stride, corridor's OWN prior baseline
+   │                  minimum volume 6 in-window / 20 baseline   ← the FP guard
+   │                  exact one-sided binomial test, p <= 0.05
+   │                  → Detection(rates, p_value, decline mix, value at risk)
+   │
+   ├─ diagnosis.py ── llm_agent.run("diagnose_corridor", context)
+   │                  context = corridor stats + decline distribution +
+   │                            peer corridors over the same window
+   │                  → hypothesis · systemic|individual|insufficient_evidence ·
+   │                    recommended action (enumerated) · reasoning · confidence
+   │                  ↳ fallback: classify from the decline distribution alone,
+   │                    bias to escalation. Audited `source: deterministic`
+   │
+   ├─ recovery.py ─── policy_engine.authorize(request, recommendation)
+   │                  corridor-detection:RR2  systemic determination required
+   │                  corridor-detection:RR3  an alternate route must exist
+   │                  corridor-detection:ES1  value at risk under the ceiling
+   │                  policy-bounds:HE1       abstention → human review
+   │                  → reroute (expiring, RR1) · escalate · no corridor action
+   │
+   ├─ recovery.py ─── every failed payment, independently:
+   │                  policy_engine.evaluate() against its decline class
+   │                  → retry (sampled from the documented retry model,
+   │                           executed through razorpay_client) · suppressed ·
+   │                    deferred on cooldown
+   │
+   └─ runner.py ───── summary recomputed from `audit_entries`, plus
+                      scoring.py's precision / recall / latency vs ground truth
+```
+
+### Two separations that carry the weight
+
+**Detection never sees ground truth.** `dataset.py` refuses a manifest path;
+`scoring.py` is the only module that opens one, and it runs after detection is
+finished. Asserted by parsing the engine's imports, not by convention. Without
+this the reported precision and recall would be statements about nothing. See
+ADR 0007.
+
+**Detection never uses a model; diagnosis always does.** Reproducible where
+reproducibility is the point, reasoned where judgment is the point. See ADR 0006.
+
+### Bounds this engine adds
+
+All named in the `corridor-detection` skill and registered in `policy_engine.py`:
+
+| Rule | Bound |
+| --- | --- |
+| `corridor-detection:MV1` / `MV2` | Minimum window (6) and baseline (20) volume before anything is flagged |
+| `corridor-detection:ST1` | Absolute ≥ 15pt **and** relative ≥ 35% **and** p ≤ 0.05 |
+| `corridor-detection:DX1` | Diagnosis confidence floor 0.6, below which the fallback applies |
+| `corridor-detection:RR1` | A reroute expires. Maximum 6 hours, clamped, never open-ended |
+| `corridor-detection:RR2` | A reroute requires a systemic determination |
+| `corridor-detection:RR3` | A reroute needs an alternate route to exist, or it fails closed |
+| `corridor-detection:ES1` | Corridor actions above ₹2,00,000 of value at risk go to a human |
+
+Measured results, including the false positive, are in
+[`docs/metrics/engine-1-root-cause.md`](metrics/engine-1-root-cause.md).
+
 ## API surface
 
 ```
@@ -237,7 +316,20 @@ GET /api/v1/audit/batches                          every run, with its seed
 GET /api/v1/audit/batches/{batch_id}/summary       headline metrics, per source
 GET /api/v1/audit/entities/{type}/{id}/timeline    the decision trail
 GET /api/v1/audit/rules                            the whole policy registry
+
+POST /api/v1/root-cause/runs                       run the loop over a batch
+GET  /api/v1/root-cause/runs                       every run, with its seed
+GET  /api/v1/root-cause/runs/{batch_id}            one run's record
+GET  /api/v1/root-cause/runs/{id}/detections       filters: determination, allowed
+GET  /api/v1/root-cause/detections/{detection_id}  full diagnosis + reasoning
+GET  /api/v1/root-cause/runs/{id}/actions          every action, with its rule
+GET  /api/v1/root-cause/runs/{id}/reroutes         filter: active_at
+GET  /api/v1/root-cause/config                     thresholds, each citing a rule
 ```
+
+The audit routes stay read-only. `POST /root-cause/runs` writes, but only by
+delegating the whole loop to `RootCauseRunner` — there is no route that can
+produce an audit entry without a decision behind it.
 
 Read-only by design: the trail is written by services and nothing else. Engine
 routers mount onto `api_router` as each phase lands. OpenAPI docs at `/docs`.
@@ -255,7 +347,10 @@ Two invariants hold everywhere:
   the column: naive datetimes are rejected on write rather than silently assumed
   to be UTC, and everything read back is tz-aware.
 
-Tables: `audit_entries`, `batch_runs`. `RecoverableEntityMixin` carries the
+Tables: `audit_entries`, `batch_runs`, `corridor_detections`, `corridor_reroutes`.
+The last two hold Engine 1's artefacts and are **not** metric sources: every
+reported figure is recomputed from `audit_entries`, so a stale row in either can
+never become a number anyone quotes. `RecoverableEntityMixin` carries the
 fields all three engines share (identifier, amount in paise, currency, status,
 attempt count, last-attempt timestamp, terminal flag) for the engine-specific
 tables that arrive in later phases.

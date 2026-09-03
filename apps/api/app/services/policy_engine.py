@@ -28,7 +28,14 @@ from datetime import UTC, datetime, timedelta, timezone
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.entity import RecoverableEntity
-from app.models.enums import Action, DeclineClass, Engine, Outcome, RuleSource
+from app.models.enums import (
+    Action,
+    CorridorDetermination,
+    DeclineClass,
+    Engine,
+    Outcome,
+    RuleSource,
+)
 from app.models.provenance import Provenance
 from app.services.decline_taxonomy import (
     BUDGET_RULE_ID,
@@ -229,6 +236,40 @@ RULE_REGISTRY: dict[str, PolicyRule] = {
             RuleSource.POLICY_BOUNDS,
             "policy-bounds -> HE4",
         ),
+        # --- Corridor recovery bounds (Engine 1) ---------------------------
+        _rule(
+            "corridor-detection:RR1",
+            "hard_stop",
+            "Every reroute expires. Maximum duration 6 hours, and a configured "
+            "duration above it is clamped — a reroute that never lapses is a "
+            "permanent config change wearing a recovery action's clothes.",
+            RuleSource.CORRIDOR_DETECTION,
+            "corridor-detection -> RR1",
+        ),
+        _rule(
+            "corridor-detection:RR2",
+            "authority",
+            "Rerouting a corridor requires a systemic determination. An individual or "
+            "insufficient-evidence diagnosis can never authorise one.",
+            RuleSource.CORRIDOR_DETECTION,
+            "corridor-detection -> RR2",
+        ),
+        _rule(
+            "corridor-detection:RR3",
+            "hard_stop",
+            "A reroute needs an alternate route to exist. Where none does, the "
+            "precondition is unsatisfiable and the action fails closed.",
+            RuleSource.CORRIDOR_DETECTION,
+            "corridor-detection -> RR3",
+        ),
+        _rule(
+            "corridor-detection:ES1",
+            "amount_threshold",
+            "A corridor-level action above Rs 2,00,000 of value at risk is escalated "
+            "for human confirmation rather than executed autonomously.",
+            RuleSource.CORRIDOR_DETECTION,
+            "corridor-detection -> ES1",
+        ),
         # --- The decision-authority boundary -----------------------------------
         _rule(
             "policy_engine:llm_authority.denied",
@@ -287,6 +328,15 @@ THRESHOLDS: dict[str, AmountThreshold] = {
             value_paise=1_500_000,  # Rs 15,000
             rule_id="rbi-mandate-rules:A3",
             description="Above this, a recurring debit needs fresh AFA each cycle. Regulatory.",
+        ),
+        AmountThreshold(
+            name="corridor_autonomous_action",
+            value_paise=20_000_000,  # Rs 2,00,000
+            rule_id="corridor-detection:ES1",
+            description=(
+                "Above this value at risk, a corridor-level action needs human "
+                "confirmation. A bulk action deserves a higher bar than one account."
+            ),
         ),
         AmountThreshold(
             name="high_value_review",
@@ -419,6 +469,18 @@ class PolicyRequest(BaseModel):
     #: Set when a precondition could not be evaluated at all. Fails closed.
     unevaluable_precondition: str | None = None
 
+    #: Engine 1 only. The diagnosis layer's determination about the corridor this
+    #: action concerns. Required for `reroute_traffic`, which `corridor-detection:RR2`
+    #: permits only on a systemic determination — the rule that stops a
+    #: concentration of insufficient-funds declines from rerouting live traffic.
+    corridor_determination: CorridorDetermination | None = None
+
+    #: Engine 1 only. Whether an alternate route actually exists for this
+    #: corridor's method. `None` means "not established", which denies under
+    #: `corridor-detection:RR3` exactly as `False` does — a reroute to nowhere is
+    #: an audit entry claiming an action that cannot have happened.
+    alternate_route_available: bool | None = None
+
 
 class PolicyDecision(BaseModel):
     """The engine's answer. Maps field-for-field onto the audit trail.
@@ -453,6 +515,14 @@ class PolicyDecision(BaseModel):
     #: what the model wanted as well as what the rules allowed.
     overridden_recommendation: str | None = None
 
+    #: The authority rule that governed the override, when a recommendation was
+    #: overruled. Separate from `rule_id`, which keeps naming the rule that
+    #: actually refused — `policy-bounds:HE1`, `corridor-detection:RR3`, an
+    #: attempt cap. Collapsing the two would leave every denial in a batch citing
+    #: the same generic authority rule, and "which rule stopped this?" is the
+    #: question the audit trail exists to answer.
+    authority_rule_id: str | None = None
+
     def audit_fields(self) -> dict[str, object]:
         """The subset that goes straight into `audit_trail.record()`."""
         return {
@@ -462,6 +532,20 @@ class PolicyDecision(BaseModel):
             "authorising_rule": self.rule_id,
             "rationale": self.rationale,
             "attempts_remaining": self.attempts_remaining,
+        }
+
+    def override_metadata(self) -> dict[str, object]:
+        """Audit metadata describing an overruled recommendation, if there was one.
+
+        Kept beside `audit_fields()` rather than folded into it: the citation
+        names the refusing rule, and this says the model was overruled while
+        doing so. Two facts, two fields.
+        """
+        if self.overridden_recommendation is None:
+            return {}
+        return {
+            "overridden_recommendation": self.overridden_recommendation,
+            "authority_rule": self.authority_rule_id,
         }
 
 
@@ -668,6 +752,58 @@ class PolicyEngine:
                 requires_human=True,
             )
 
+        # 2b. Corridor-level reroute preconditions (Engine 1).
+        #
+        # These sit above the attempt caps deliberately: a reroute that should
+        # never have been proposed must be refused for the *right* reason, not
+        # incidentally by a budget check that happens to fire first.
+        if request.proposed_action is Action.REROUTE_TRAFFIC:
+            if request.corridor_determination is not CorridorDetermination.SYSTEMIC:
+                stated = (
+                    request.corridor_determination.value
+                    if request.corridor_determination
+                    else "none stated"
+                )
+                return _deny(
+                    rule_id="corridor-detection:RR2",
+                    reason_code="REROUTE_REQUIRES_SYSTEMIC",
+                    rationale=(
+                        f"Corridor {entity.entity_id} was diagnosed '{stated}'. Only a "
+                        "systemic determination may reroute live traffic — a "
+                        "concentration of customer-side declines is not a corridor "
+                        "outage, and rerouting on one is the expensive mistake."
+                    ),
+                    requires_human=True,
+                )
+            if exceeds_threshold("corridor_autonomous_action", entity.amount_paise):
+                return _deny(
+                    rule_id="corridor-detection:ES1",
+                    reason_code="CORRIDOR_VALUE_AT_RISK",
+                    rationale=(
+                        f"{_rupees(entity.amount_paise)} at risk is above the corridor "
+                        "autonomous-action ceiling of "
+                        f"{_rupees(THRESHOLDS['corridor_autonomous_action'].value_paise)}. "
+                        "A bulk action at this value is confirmed by a human first."
+                    ),
+                    action=Action.ESCALATE,
+                    outcome=Outcome.ESCALATED,
+                    requires_human=True,
+                )
+            if request.alternate_route_available is not True:
+                return _deny(
+                    rule_id="corridor-detection:RR3",
+                    reason_code="NO_ALTERNATE_ROUTE",
+                    rationale=(
+                        f"No alternate route is available for corridor "
+                        f"{entity.entity_id}, so the reroute has nowhere to send "
+                        "traffic. Failing closed to human review rather than "
+                        "recording an action that cannot have happened."
+                    ),
+                    action=Action.ESCALATE,
+                    outcome=Outcome.ESCALATED,
+                    requires_human=True,
+                )
+
         # 3. Attempt caps. The effective cap is the strictest applicable bound.
         cap, cap_rule = self._effective_cap(request, limits, spec)
         attempts_remaining = max(cap - entity.attempt_count, 0)
@@ -732,9 +868,18 @@ class PolicyEngine:
                 )
 
         # 6. Nothing fired. Permitted, inside a stated envelope.
+        #
+        # A permitted reroute cites the corridor rule that let it through rather
+        # than the generic one, so the trail names the specific bound the action
+        # satisfied — RR2 is the rule doing the work in both directions.
+        permit_rule = (
+            "corridor-detection:RR2"
+            if request.proposed_action is Action.REROUTE_TRAFFIC
+            else "policy_engine:permitted"
+        )
         return _permit(
             action=request.proposed_action,
-            rule_id="policy_engine:permitted",
+            rule_id=permit_rule,
             reason_code=spec.code.value if spec else "NO_STOPPING_RULE",
             rationale=(
                 f"No stopping rule fired. {attempts_remaining} of {cap} attempts remain "
@@ -766,12 +911,16 @@ class PolicyEngine:
         base = self.evaluate(request)
 
         if not base.allowed:
-            # The refusal stands. Recording what the model wanted is the point:
-            # a trail showing the gate overruling a recommendation is the
-            # evidence that the gate is real.
+            # The refusal stands, and it keeps citing the rule that actually
+            # refused. Recording what the model wanted is the point: a trail
+            # showing the gate overruling a recommendation is the evidence that
+            # the gate is real — but the citation has to stay specific, or every
+            # overruled denial in a batch cites the same generic authority rule
+            # and "which rule stopped this?" stops having an answer.
+            _require_rule("policy_engine:llm_authority.denied")
             return base.model_copy(
                 update={
-                    "rule_id": "policy_engine:llm_authority.denied",
+                    "authority_rule_id": "policy_engine:llm_authority.denied",
                     "rationale": (
                         f"{base.rationale} The reasoning layer recommended "
                         f"'{recommendation.action.value}'; a recommendation cannot "
@@ -782,7 +931,7 @@ class PolicyEngine:
             )
 
         if recommendation.action not in base.permitted_actions:
-            return _deny(
+            refusal = _deny(
                 rule_id="policy_engine:llm_authority.out_of_envelope",
                 reason_code=base.reason_code,
                 rationale=(
@@ -792,6 +941,14 @@ class PolicyEngine:
                 ),
                 attempts_remaining=base.attempts_remaining,
                 earliest_next_attempt_at=base.earliest_next_attempt_at,
+            )
+            # Here the authority rule *is* the refusing rule: nothing else
+            # stopped the action, the recommendation itself was inadmissible.
+            return refusal.model_copy(
+                update={
+                    "authority_rule_id": "policy_engine:llm_authority.out_of_envelope",
+                    "overridden_recommendation": recommendation.action.value,
+                }
             )
 
         # The recommendation is admissible. It may only make the decision

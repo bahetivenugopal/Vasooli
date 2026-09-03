@@ -97,6 +97,21 @@ class DeclineClass(StrEnum):
     UNKNOWN = "UNKNOWN"
 
 
+class CorridorDetermination(StrEnum):
+    """Engine 1's central judgment: whose problem is this?
+
+    The same decline code means opposite things depending on this answer, which
+    is why it is a first-class value rather than a boolean. `INSUFFICIENT_EVIDENCE`
+    is deliberately one of the three: a diagnosis layer that always produces a
+    confident answer is one that will confidently be wrong, and abstention here
+    routes the corridor to a human under `policy-bounds:HE1`.
+    """
+
+    SYSTEMIC = "systemic"
+    INDIVIDUAL = "individual"
+    INSUFFICIENT_EVIDENCE = "insufficient_evidence"
+
+
 class BatchStatus(StrEnum):
     """Lifecycle of one reproducible batch run."""
 
@@ -116,4 +131,5 @@ class RuleSource(StrEnum):
     DECLINE_TAXONOMY = "decline-taxonomy"
     RBI_MANDATE_RULES = "rbi-mandate-rules"
     POLICY_BOUNDS = "policy-bounds"
+    CORRIDOR_DETECTION = "corridor-detection"
     PRODUCT_DECISION = "product-decision"

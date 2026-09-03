@@ -5,13 +5,16 @@
 **AI-first revenue recovery.** Built for the Razorpay Buildathon — **AI Revenue
 Recovery** track.
 
-> ### 🚧 Status: shared core and data foundry built, engines next
+> ### 🚧 Status: shared core, data foundry and Engine 1 built
 >
 > The shared core — policy engine, reasoning layer, audit trail, Razorpay client
-> — and the seeded synthetic data generators are in place, with committed sample
-> batches. The three engines and the dashboard are **not built yet**; they land
-> as separate phases, each with its own check and commit. Nothing in this README
-> claims a capability that exists only as a plan.
+> — the seeded synthetic data generators with committed sample batches, and
+> **Engine 1 (Root-Cause Recovery)** are in place. Its measured results, false
+> positives included, are in
+> [`docs/metrics/engine-1-root-cause.md`](docs/metrics/engine-1-root-cause.md).
+> Engines 2 and 3 and the dashboard are **not built yet**; they land as separate
+> phases, each with its own check and commit. Nothing in this README claims a
+> capability that exists only as a plan.
 
 ---
 

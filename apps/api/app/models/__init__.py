@@ -12,6 +12,7 @@ from app.models.enums import (
     TERMINAL_OUTCOMES,
     Action,
     BatchStatus,
+    CorridorDetermination,
     DeclineClass,
     Engine,
     EntityType,
@@ -20,6 +21,12 @@ from app.models.enums import (
     RuleSource,
 )
 from app.models.provenance import Provenance
+from app.models.root_cause import (
+    CorridorDetection,
+    CorridorDetectionRead,
+    CorridorReroute,
+    CorridorRerouteRead,
+)
 
 __all__ = [
     "TERMINAL_OUTCOMES",
@@ -30,6 +37,11 @@ __all__ = [
     "BatchRunRead",
     "BatchStatus",
     "BatchSummary",
+    "CorridorDetection",
+    "CorridorDetectionRead",
+    "CorridorDetermination",
+    "CorridorReroute",
+    "CorridorRerouteRead",
     "DeclineClass",
     "Engine",
     "EntityType",
