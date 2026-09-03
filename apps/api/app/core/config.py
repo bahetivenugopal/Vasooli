@@ -48,8 +48,9 @@ class Settings(BaseSettings):
     gemini_api_key: str = ""
 
     # Never hardcode a model at a call site — it is resolved from here, once.
-    # NB: the change request named `gemini-3.1-flash-lite-preview`, which was
-    # shut down on 2026-05-25. This is its GA successor. See ADR 0002.
+    # The change request named `gemini-3.1-flash-lite-preview`; we use the GA id
+    # because a preview id can be retired without notice. Both were verified
+    # live on 2026-09-03 and both respond. See ADR 0002.
     gemini_model: str = "gemini-3.1-flash-lite"
 
     # Skip the provider entirely and use registered deterministic fallbacks

@@ -19,10 +19,19 @@ Any code that calls a model reads this first.
 | Prompts | `apps/api/app/services/prompts/` |
 
 > **Model-id note.** The change request specified
-> `gemini-3.1-flash-lite-preview`. That model was **shut down on 2026-05-25**;
-> calls to it fail. Its GA successor `gemini-3.1-flash-lite` is the default
-> instead. See ADR 0002. Because the model is resolved from config, reverting is
-> a one-line change — but do not point it back at a dead preview id.
+> `gemini-3.1-flash-lite-preview`. We default to its GA counterpart
+> `gemini-3.1-flash-lite` instead, because a `-preview` id can be retired
+> without notice and taking that risk buys nothing here.
+>
+> **Corrected 2026-09-03.** An earlier revision of this note claimed the preview
+> id was shut down and that calls to it fail. That was wrong. Verified live
+> against this project's key on 2026-09-03: `gemini-3.1-flash-lite-preview` is
+> still listed by `models.list()` and still returns a normal response. The
+> default is unchanged — GA is still the right call — but the *reason* is
+> stability, not unavailability. Left visible rather than quietly edited,
+> because "verify, do not remember" applies to this file too.
+>
+> Because the model is resolved from config, switching is a one-line change.
 
 **Never hardcode a model at a call site.** It comes from `settings.gemini_model`,
 always, so there is exactly one place to change it and exactly one value flowing

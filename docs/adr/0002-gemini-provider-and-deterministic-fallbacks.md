@@ -28,11 +28,21 @@ reasoning provider** changes. These are separate things and the docs keep them
 separate — the build-workflow story is legitimately about Claude Code.
 
 **Model id deviation.** The change request named
-`gemini-3.1-flash-lite-preview`. That model was **shut down on 2026-05-25**
-(confirmed against Google's model documentation), so calls to it fail outright.
-The default is its GA successor **`gemini-3.1-flash-lite`**. Because the model is
-resolved from `GEMINI_MODEL` and never hardcoded at a call site, reverting is a
-one-line config change — but it should not be pointed back at a dead preview id.
+`gemini-3.1-flash-lite-preview`. The default is its GA counterpart
+**`gemini-3.1-flash-lite`**: a `-preview` id may be retired without notice, and
+carrying that risk through a graded submission buys nothing. Because the model
+is resolved from `GEMINI_MODEL` and never hardcoded at a call site, switching is
+a one-line config change.
+
+> **Correction, 2026-09-03.** As first written, this section asserted that the
+> preview id had been shut down on 2026-05-25 and that calls to it "fail
+> outright". That claim was not verified and is false. A live check against this
+> project's own key on 2026-09-03 found `gemini-3.1-flash-lite-preview` both
+> listed by `models.list()` and returning a normal response. The decision stands
+> unchanged; the justification is now stability rather than unavailability. The
+> error is recorded rather than erased — this repo's rule is "verify, do not
+> remember", and an ADR that quietly rewrites its own reasoning is worth less
+> than one that shows where it was wrong.
 
 ### 2. The wrapper sits behind a thin interface
 
