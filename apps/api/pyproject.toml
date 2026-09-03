@@ -47,3 +47,6 @@ indent-style = "space"
 testpaths = ["app/tests"]
 python_files = ["test_*.py"]
 addopts = "-q"
+# Pin the scope explicitly — pytest-asyncio warns on every run while it is unset,
+# and its future default (function) differs from today's (fixture caching scope).
+asyncio_default_fixture_loop_scope = "function"

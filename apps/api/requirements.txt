@@ -10,7 +10,7 @@ fastapi==0.115.6
 uvicorn[standard]==0.34.0
 
 # --- Validation & settings (Pydantic v2) -----------------------------------
-pydantic==2.10.4
+pydantic==2.13.5
 pydantic-settings==2.7.0
 
 # --- Database --------------------------------------------------------------
@@ -18,11 +18,15 @@ SQLAlchemy==2.0.36
 
 # --- Payments --------------------------------------------------------------
 # Test-mode keys only. See .claude/skills/razorpay-api/SKILL.md
-razorpay==1.4.2
+# 2.x is required on Python 3.12: razorpay<=1.4.2 imports `pkg_resources`, which
+# setuptools removed in 81 and which is absent from a bare 3.12 venv.
+razorpay==2.0.1
 httpx==0.28.1
 
 # --- Reasoning layer -------------------------------------------------------
-anthropic==0.42.0
+# Google Gen AI SDK. Gemini 3 features require >=1.51.0; 2.x is recommended.
+# See .claude/skills/llm-provider/SKILL.md
+google-genai==2.22.0
 
 # --- Utilities -------------------------------------------------------------
 python-dotenv==1.0.1
