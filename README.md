@@ -5,12 +5,13 @@
 **AI-first revenue recovery.** Built for the Razorpay Buildathon — **AI Revenue
 Recovery** track.
 
-> ### 🚧 Status: scaffolding complete, build in progress
+> ### 🚧 Status: shared core and data foundry built, engines next
 >
-> Repo structure, agent/skill/command layer, and both app scaffolds are in place.
-> The three engines, the shared policy core, and the dashboard are **not built
-> yet** — they land as separate phases, each with its own check and commit.
-> Nothing in this README claims a capability that exists only as a plan.
+> The shared core — policy engine, reasoning layer, audit trail, Razorpay client
+> — and the seeded synthetic data generators are in place, with committed sample
+> batches. The three engines and the dashboard are **not built yet**; they land
+> as separate phases, each with its own check and commit. Nothing in this README
+> claims a capability that exists only as a plan.
 
 ---
 
@@ -137,6 +138,35 @@ npm run dev
 
 → `http://localhost:3000`
 
+## The datasets
+
+All three engines run on seeded, reproducible synthetic batches. Reference
+batches are committed in [`data/samples/`](data/samples/) so anyone can inspect
+the exact rows every reported number was computed from — and regenerate them:
+
+```bash
+# rewrite the committed samples (run from the repo root)
+python -m data.generators.cli all --seed 42 --out data/samples
+
+# or verify one without touching them
+python -m data.generators.cli payments --seed 42 --out /tmp/check
+diff /tmp/check/payments.jsonl data/samples/payments/payments.jsonl   # silent
+```
+
+Same seed + same config = byte-identical output. Every batch carries a manifest
+with its seed, the resolved config, the generator version, a SHA-256 of the
+output, the **measured** distributions, and the ground truth the engines are
+scored against — which corridor was really degraded, which reply really
+contained a promise. Ground truth lives in the manifest and never in a record,
+so an engine cannot read the answer it is being tested on.
+
+[`data/DATA_CARD.md`](data/DATA_CARD.md) documents every field, every
+distribution and why it was chosen, the retry-success probability model, and the
+limitations. Notably: **no dataset contains a retry outcome.** Whether a retry
+would have worked is a documented, seeded probability model the engines sample at
+run time ([ADR 0005](docs/adr/0005-simulated-retry-outcomes.md)), not a number
+baked into the data.
+
 ## Repo layout
 
 ```
@@ -147,8 +177,9 @@ apps/api/          FastAPI backend
   app/services/    the shared core: razorpay_client · llm_agent
                    policy_engine · audit_trail
 apps/web/          Next.js control tower dashboard
-data/generators/   seeded, reproducible synthetic batches
-data/samples/      committed sample batches
+data/generators/   seeded, reproducible synthetic batches + configs
+data/samples/      committed sample batches (data + manifest)
+data/DATA_CARD.md  every distribution, its rationale, and the limitations
 docs/adr/          architecture decision records
 docs/pitch/        video script and submission answers
 ```

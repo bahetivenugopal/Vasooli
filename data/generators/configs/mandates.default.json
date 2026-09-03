@@ -1,0 +1,63 @@
+{
+  "_comment": [
+    "The mandate book Engine 2 works from. Cohort shares are allocated exactly,",
+    "not sampled: several acceptance criteria are 'this case is present', and a",
+    "revoked mandate that only shows up on some seeds is not a test.",
+    "The AFA threshold below is REGULATORY (rbi-mandate-rules:A3), not ours — it",
+    "sits in the config only so the amount buckets can be read against it."
+  ],
+  "dataset": "mandates",
+  "batch_prefix": "mnd",
+  "as_of": "2026-09-01T09:00:00+05:30",
+  "mandate_count": 64,
+  "customer_pool": 52,
+  "afa_threshold_paise": 1500000,
+
+  "frequencies": { "monthly": 0.7, "weekly": 0.16, "quarterly": 0.14 },
+
+  "amount_buckets": {
+    "below_afa_small": { "weight": 0.36, "min_paise": 19900, "max_paise": 299900 },
+    "below_afa_near_threshold": { "weight": 0.24, "min_paise": 900000, "max_paise": 1499900 },
+    "above_afa_near_threshold": { "weight": 0.2, "min_paise": 1500100, "max_paise": 2200000 },
+    "above_afa_large": { "weight": 0.2, "min_paise": 2200000, "max_paise": 7500000 }
+  },
+
+  "cohorts": {
+    "healthy": 0.28,
+    "first_failure": 0.22,
+    "repeat_failure": 0.16,
+    "cap_reached": 0.11,
+    "revoked_mid_sequence": 0.1,
+    "paused": 0.07,
+    "notice_violation": 0.06
+  },
+
+  "notice_profiles": { "on_time": 0.74, "late": 0.1, "stale": 0.09, "missing": 0.07 },
+
+  "notice_windows_hours": {
+    "on_time": { "min": 24, "max": 48 },
+    "late": { "min": 2, "max": 23 },
+    "stale": { "min": 50, "max": 96 }
+  },
+
+  "failure_codes": [
+    { "code": "INSUFFICIENT_FUNDS", "class": "SOFT", "weight": 0.46 },
+    { "code": "ISSUER_UNAVAILABLE", "class": "SOFT", "weight": 0.16 },
+    { "code": "GATEWAY_TIMEOUT", "class": "SOFT", "weight": 0.1 },
+    { "code": "TRANSACTION_LIMIT_EXCEEDED", "class": "SOFT", "weight": 0.08 },
+    { "code": "DO_NOT_HONOUR", "class": "AMBIGUOUS", "weight": 0.08 },
+    { "code": "ACCOUNT_CLOSED", "class": "HARD", "weight": 0.05 },
+    { "code": "CARD_EXPIRED", "class": "HARD", "weight": 0.04 },
+    { "code": "AFA_REQUIRED", "class": "POLICY_BLOCK", "weight": 0.03, "requires_above_afa_threshold": true }
+  ],
+
+  "terminal_failure_code": "MANDATE_REVOKED",
+  "afa_registration_gap_rate": 0.06,
+
+  "cycle_history_cycles": { "min": 1, "max": 4 },
+  "registration_lookback_days": { "min": 45, "max": 420 },
+  "retry_spacing_hours": { "min": 24, "max": 34 },
+  "next_debit_offset_hours": { "min": 8, "max": 56 },
+  "notice_violation_next_debit_offset_hours": { "min": 26, "max": 44 },
+  "mandate_cap_multiplier": { "min": 1.0, "max": 1.5 }
+}

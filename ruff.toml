@@ -1,0 +1,32 @@
+# Lint settings for the Python that lives outside `apps/api/` — the synthetic
+# data foundry in `data/generators/` and the demo scripts in `scripts/`.
+#
+# Ruff resolves configuration from the nearest ancestor config file, and
+# `apps/api/pyproject.toml` cannot reach either directory. Without this file
+# those paths would be linted with Ruff's defaults, which is a *weaker* rule set
+# than the rest of the repo — so `ruff check` from the repo root would pass on
+# code that `ruff check` inside `apps/api/` would reject.
+#
+# Keep the two in sync. If a rule changes in `apps/api/pyproject.toml`, change it
+# here too, or the repo quietly acquires two standards.
+
+line-length = 100
+target-version = "py312"
+exclude = [".venv", "__pycache__", ".ruff_cache", ".pytest_cache", "apps"]
+
+[lint]
+select = ["E", "W", "F", "I", "B", "C4", "UP", "SIM", "RUF"]
+ignore = [
+    "E501", # line length — the formatter owns this
+    "B008", # function call in default arg — the FastAPI Depends() idiom
+]
+
+[lint.per-file-ignores]
+"__init__.py" = ["F401"] # re-exports are intentional
+
+[lint.isort]
+known-first-party = ["app", "data"]
+
+[format]
+quote-style = "double"
+indent-style = "space"

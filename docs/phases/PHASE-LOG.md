@@ -142,3 +142,148 @@ Engine 2's phase should confirm the mandate numbers still read correctly against
 
 No engines, no synthetic data, no frontend, no engine-specific routes, no
 deployment. Commits were left to the user.
+
+---
+
+## Phase 2 — Synthetic Data Foundry
+
+**Status:** complete · **Date:** 2026-09-04
+**Verified by:** 171 pytest passing (46 new), `ruff check` clean from the repo
+root, all three committed samples regenerating byte-identically from their
+manifest's seed.
+
+### What now exists
+
+`data/generators/` — three seeded generators plus the machinery they share:
+
+- `common.py` — labelled RNG streams, IST/UTC time, exact allocation, hashing,
+  manifests, `GeneratedBatch`
+- `payments.py` · `mandates.py` · `invoices.py` — the three datasets
+- `replies.py` — 20 customer-reply templates with per-template ground truth
+- `retry_model.py` — the retry-success probability model **the engines sample**
+- `vocabulary.py` — the decline vocabulary, imported from the shared core
+- `configs/*.json` — the worlds being simulated, in version control
+- `cli.py` — `python -m data.generators.cli all --seed 42 --out data/samples`
+
+Committed samples in `data/samples/`: payments 589 rows (`pay-s42-d5db86f7`),
+mandates 64 (`mnd-s42-dabc793d`), invoices 72 (`inv-s42-680b8a62`), each with its
+manifest. Plus `data/DATA_CARD.md`, `data/generators/README.md`, and ADR 0005.
+
+### What the engines consume
+
+```python
+from data.generators.common import load_config          # configs, resolved
+from data.generators.retry_model import RetrySuccessModel
+
+model = RetrySuccessModel.load()
+outcome = model.sample(seeded_rng, "INSUFFICIENT_FUNDS",
+                       hours_since_previous=26.0, attempt_number=2)
+# -> .succeeded, .probability, .failure_code, .simulate_failure_key
+```
+
+Datasets are read as JSONL. **Engine code must never open a manifest** — that is
+where ground truth lives. Scoring and evaluation code reads manifests; engines do
+not.
+
+### Deviations from the phase file, and why
+
+| # | Deviation | Why it happened |
+| --- | --- | --- |
+| 1 | **Configs are JSON, not YAML** | §5.1 allows either. PyYAML is not in `requirements.txt`, and adding a parser dependency so a config can have fewer braces is a bad trade. |
+| 2 | **Manifests carry a `nondeterministic` block** | §5.1 wants a timestamp in the manifest *and* byte-identical reproduction. Both hold only if the clock is quarantined. Everything outside that key is a pure function of (seed, config, generator version), and a test asserts exactly that. |
+| 3 | **`razorpay_reason` is `null` for most failure codes** | Only eight upstream reasons are doc-verified (`REASON_MAP`). Inventing strings for `ISSUER_UNAVAILABLE`, `CARD_EXPIRED`, `MANDATE_REVOKED` and the rest would make a replayed failure normalize to `UNKNOWN` and mislabel itself. See the trap below — it changes what phase 1's "set `notes.simulate_failure`" note can mean. |
+| 4 | **Deterministic coverage repair passes** | Several acceptance criteria are "this case is present": every reply category, Hinglish, a broken promise, an unmappable decline. Sampling makes those hold on lucky seeds only. Records placed this way are flagged `coverage_forced` in the manifest, and the passes are documented in the data card §5. |
+| 5 | **Ground truth is descriptive, never a verdict** | The manifest records *how a record was built* — cohort, notice profile, AFA side — and not what the policy engine should decide about it. §5 forbids generators judging data, and an "expected gate" field would have been exactly that. |
+| 6 | **Added a repo-root `ruff.toml`** | `apps/api/pyproject.toml` cannot reach `data/` or `scripts/`, so those paths were linted with Ruff's much weaker defaults: `ruff check` at the root passed on code that `ruff check` inside `apps/api` would reject. Equalising them surfaced one genuinely unused import and eight stale `noqa` directives in `scripts/core_loop_demo.py`, now fixed. **Keep the two configs in sync.** |
+| 7 | **`data/__init__.py` plus a `sys.path` bootstrap** | Generators import the taxonomy from `apps/api` rather than keeping a second copy of the vocabulary. Same bootstrap `scripts/core_loop_demo.py` already uses. |
+| 8 | **A second, deliberately harder degradation** | §5.2 asks for "one or more". The route-level event has 10 in-window attempts at 0.60 against a 0.85 baseline — Engine 1 may well miss it. That is the point: recall below 1.0, reported honestly, beats a dataset where nothing can be missed. |
+| 9 | **Invoice status vocabulary excludes `disputed`** | A dispute exists only in the reply text. A ledger flag for it would hand Engine 3 the answer it is meant to extract. A test enforces the vocabulary. |
+| 10 | **`days_overdue` on a paid invoice means "days late when it landed"** | Zeroing it would contradict `due_at`/`paid_at`; leaving it as days-since-due would claim a settled invoice is still ageing. Derivable either way, so an engine recomputing it agrees with the ledger. |
+
+### Things a later phase will otherwise get wrong
+
+**The datasets are anchored to a fixed `as_of`, and it is not today.** Payments
+covers 29–31 Aug 2026 IST; mandates and invoices are built around
+`2026-09-01T09:00+05:30`. An engine run against `datetime.now()` sees every
+pre-debit notice as stale and every next debit as long overdue, so the compliance
+gates fire for the wrong reason. **Engine runs must take `now` as an input,
+defaulting to the dataset's `as_of`** — it is in `manifest.config.resolved.as_of`
+(or `window_start` for payments). This is the single most likely way to waste an
+afternoon in Phases 3–5.
+
+**A failure with `razorpay_reason: null` cannot be replayed through
+`razorpay_client`.** Phase 1's note — "the generator must set
+`notes.simulate_failure` or every simulated call succeeds" — holds only for the
+eight verified reasons. For everything else the engine must record the failure
+from the record's `failure_reason_code` directly rather than round-tripping it,
+or the decline silently becomes `UNKNOWN`. `RetryOutcome.simulate_failure_key` is
+`None` in exactly those cases; treat `None` as "do not call the client expecting
+a failure", never as "call it and hope".
+
+**Two different things are called a batch id.** `pay-s42-d5db86f7` identifies a
+*dataset*; `BatchRun.batch_id` identifies an *engine run*. One dataset can feed
+many runs, so they must not be conflated. Put the dataset batch id in
+`BatchRun.notes` so a reported number can be traced back to the rows it came from.
+
+**`retry_model.py` lives in `data/generators/`, so engines will import the data
+package.** Deliberate — the model is a documented data assumption, not engine
+logic — but it means `apps/api` code depends on a repo-root package. If that
+becomes awkward, move the module into `app/services/` and leave the JSON where it
+is. Do not fork the values.
+
+**Degradation windows are absolute timestamps.** Change `window_start` or `days`
+in the payments config without moving them and the batch quietly contains nothing
+to detect. `ground_truth.degradations[].observed_in_window.attempts` is where you
+would notice.
+
+**Mandate `attempts_in_current_cycle` counts failures in the latest cycle only**,
+and a test keeps it consistent with `debit_history`. Healthy mandates have 0.
+
+**Revoked and paused mandates still carry a scheduled `next_debit_at`.** That is
+the `policy-bounds:HS1` trap, on purpose. An engine that filters on
+`status == "active"` before checking hard stops will look correct and prove
+nothing.
+
+### Measured distributions in the committed samples (seed 42)
+
+Not the intended figures — the measured ones, read from the manifests:
+
+- **Payments:** 589 attempts, 88.8% success (band 85–92%); per-method 86–93%.
+  66 failures: SOFT 81.8%, AMBIGUOUS 12.1%, HARD 4.6%, UNKNOWN 1.5%. Diurnal
+  peak/trough **48×**. The HDFC×UPI degradation shows 21 in-window attempts at
+  33.3% against 97.0% for the same corridor outside the window. The decoy: 9
+  attempts, 55.6%, nothing injected. 34 of 66 failures are replayable through a
+  verified fixture.
+- **Mandates:** 64 mandates (52 active, 7 revoked, 5 paused), 194 debit attempts,
+  74 failures. 38 at or below and 26 above ₹15,000. 7 sitting at the Part B
+  attempt cap, 3 with an AFA registration gap. All four notice profiles present
+  (on_time / late / stale / missing). Issuer-decline mix with the placed
+  lifecycle outcomes excluded: SOFT 78.7%, HARD 11.5%, AMBIGUOUS 9.8%.
+- **Invoices:** 72 invoices (46 overdue, 12 paid, 14 open), 43 replies across all
+  five categories, 26 English / 17 Hinglish, 8 disputes. 30 promises: **12 kept,
+  8 broken, 10 still pending**; 14 with an explicit date, 6 inferable, 10
+  undateable. The ladder never exceeds 3 rungs.
+
+The soft share lands at 81.8% rather than the configured 80% because the injected
+degradations force a specific code inside their windows, which moves the mix
+visibly at 66 failures. Both the configured and the measured numbers are in the
+manifest, and the distribution test asserts the claim the project actually makes
+out loud — soft is the clear majority — rather than the config value.
+
+### Assumptions worth repeating
+
+All are in `data/DATA_CARD.md` §9, but three bound what Phases 3–5 can honestly
+claim:
+
+1. **The retry-success probabilities are ours**, not measured from production
+   traffic. They are the biggest single lever on the headline recovery number.
+2. **One reply per invoice.** Promise-then-renege-then-promise-again does not
+   exist in this corpus, so Engine 3 cannot be scored on it.
+3. **Reply text is templated** (20 templates). It covers the phrasings that
+   matter, but an extractor could in principle overfit to it.
+
+### Not done in this phase (deliberately)
+
+No detection logic, no recovery logic, no scoring — generators produce data and
+never judge it. No engine code, no frontend, no deployment. Commits were left to
+the user.

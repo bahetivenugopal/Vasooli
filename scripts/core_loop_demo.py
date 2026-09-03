@@ -28,15 +28,15 @@ from pathlib import Path
 # Run from the repo root without installing the package.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "apps" / "api"))
 
-from app.db.base import Base  # noqa: E402
-from app.db.session import SessionLocal, engine  # noqa: E402
-from app.models import AuditEntry, BatchRun  # noqa: E402,F401 - registers tables
-from app.models.entity import RecoverableEntity  # noqa: E402
-from app.models.enums import Action, Engine, EntityType, Outcome  # noqa: E402
-from app.models.provenance import Provenance  # noqa: E402
-from app.services.audit_trail import AuditTrail  # noqa: E402
-from app.services.decline_taxonomy import DeclineCode  # noqa: E402
-from app.services.policy_engine import (  # noqa: E402
+from app.db.base import Base
+from app.db.session import SessionLocal, engine
+from app.models import AuditEntry, BatchRun  # noqa: F401 - registers tables
+from app.models.entity import RecoverableEntity
+from app.models.enums import Action, Engine, EntityType
+from app.models.provenance import Provenance
+from app.services.audit_trail import AuditTrail
+from app.services.decline_taxonomy import DeclineCode
+from app.services.policy_engine import (
     HARD_ATTEMPT_CEILING,
     LLMRecommendation,
     PolicyEngine,

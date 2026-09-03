@@ -1,0 +1,57 @@
+{
+  "_comment": [
+    "The retry-success probability model. Generators do NOT pre-decide whether a",
+    "retry works: they produce the world, and the engines sample this model,",
+    "seeded, at run time. That keeps a measured recovery rate an honest",
+    "consequence of the engine's decisions rather than a number baked into the",
+    "data. Every value here is a stated modelling assumption, argued in",
+    "data/DATA_CARD.md and in ADR 0005. Change one and the recovery rate moves —",
+    "which is precisely why it lives in a version-controlled file and not in code."
+  ],
+  "model_version": "1.0.0",
+  "base_success_probability": {
+    "INSUFFICIENT_FUNDS": 0.42,
+    "ISSUER_UNAVAILABLE": 0.62,
+    "GATEWAY_TIMEOUT": 0.55,
+    "NETWORK_ERROR": 0.58,
+    "TRANSACTION_LIMIT_EXCEEDED": 0.5,
+    "AUTH_TIMEOUT": 0.34,
+    "CUSTOMER_CANCELLED": 0.22,
+    "DO_NOT_HONOUR": 0.18,
+    "TECHNICAL_DECLINE": 0.24,
+    "CARD_EXPIRED": 0.0,
+    "CARD_LOST_OR_STOLEN": 0.0,
+    "ACCOUNT_CLOSED": 0.0,
+    "INVALID_ACCOUNT": 0.0,
+    "INTERNATIONAL_NOT_ALLOWED": 0.0,
+    "CARD_DISABLED_ONLINE": 0.0,
+    "FRAUD_SUSPECTED": 0.0,
+    "MANDATE_REVOKED": 0.0,
+    "MANDATE_EXPIRED": 0.0,
+    "AFA_REQUIRED": 0.0,
+    "PRE_DEBIT_NOTICE_MISSING": 0.0,
+    "UNKNOWN": 0.0
+  },
+  "class_default_probability": {
+    "SOFT": 0.35,
+    "AMBIGUOUS": 0.18,
+    "HARD": 0.0,
+    "TERMINAL_MANDATE": 0.0,
+    "POLICY_BLOCK": 0.0,
+    "UNKNOWN": 0.0
+  },
+  "spacing_multipliers": [
+    { "min_hours": 0, "multiplier": 0.3 },
+    { "min_hours": 6, "multiplier": 0.7 },
+    { "min_hours": 24, "multiplier": 1.0 },
+    { "min_hours": 72, "multiplier": 1.1 }
+  ],
+  "attempt_decay": 0.8,
+  "probability_ceiling": 0.95,
+  "customer_present_probability": {
+    "AUTH_TIMEOUT": 0.55,
+    "CUSTOMER_CANCELLED": 0.4,
+    "AFA_REQUIRED": 0.6,
+    "PRE_DEBIT_NOTICE_MISSING": 0.72
+  }
+}

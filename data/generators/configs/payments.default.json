@@ -1,0 +1,161 @@
+{
+  "_comment": [
+    "The world Engine 1 sees: three days of a mid-size Indian merchant's payment",
+    "attempts. Read this file and you know exactly what was simulated — that is",
+    "the point of keeping it in version control instead of in function arguments.",
+    "Rationale for every number is in data/DATA_CARD.md."
+  ],
+  "dataset": "payments",
+  "batch_prefix": "pay",
+  "window_start": "2026-08-29T00:00:00+05:30",
+  "days": 3,
+  "attempts_per_day": 200,
+  "attempts_per_day_jitter": 0.12,
+  "customer_pool": 240,
+
+  "diurnal_weights_ist": [
+    1.0, 0.6, 0.4, 0.3, 0.3, 0.5, 1.0, 1.8, 2.8, 4.0, 5.5, 6.5, 6.8, 6.0, 5.5,
+    5.2, 5.0, 5.5, 6.2, 7.0, 7.5, 6.5, 4.5, 2.5
+  ],
+
+  "amount_buckets": [
+    { "label": "small", "weight": 0.45, "min_paise": 4900, "max_paise": 99900 },
+    { "label": "medium", "weight": 0.32, "min_paise": 100000, "max_paise": 499900 },
+    { "label": "large", "weight": 0.18, "min_paise": 500000, "max_paise": 2499900 },
+    { "label": "high_value", "weight": 0.05, "min_paise": 2500000, "max_paise": 9999900 }
+  ],
+
+  "methods": {
+    "upi": {
+      "weight": 0.55,
+      "baseline_success_rate": 0.915,
+      "banks": [
+        { "code": "HDFC", "name": "HDFC Bank", "weight": 0.22, "success_delta": 0.01 },
+        { "code": "SBIN", "name": "State Bank of India", "weight": 0.2, "success_delta": -0.025 },
+        { "code": "ICIC", "name": "ICICI Bank", "weight": 0.16, "success_delta": 0.008 },
+        { "code": "UTIB", "name": "Axis Bank", "weight": 0.14, "success_delta": -0.005 },
+        { "code": "PYTM", "name": "Paytm Payments Bank", "weight": 0.1, "success_delta": -0.015 },
+        { "code": "KKBK", "name": "Kotak Mahindra Bank", "weight": 0.08, "success_delta": 0.004 },
+        { "code": "YESB", "name": "Yes Bank", "weight": 0.06, "success_delta": -0.02 },
+        { "code": "IDFB", "name": "IDFC First Bank", "weight": 0.04, "success_delta": 0.006 }
+      ],
+      "routes": [
+        { "id": "rt_upi_npci_a", "weight": 0.6 },
+        { "id": "rt_upi_npci_b", "weight": 0.4 }
+      ]
+    },
+    "card": {
+      "weight": 0.25,
+      "baseline_success_rate": 0.862,
+      "banks": [
+        { "code": "HDFC", "name": "HDFC Bank", "weight": 0.28, "success_delta": 0.012 },
+        { "code": "SBIN", "name": "State Bank of India", "weight": 0.18, "success_delta": -0.03 },
+        { "code": "ICIC", "name": "ICICI Bank", "weight": 0.18, "success_delta": 0.006 },
+        { "code": "UTIB", "name": "Axis Bank", "weight": 0.14, "success_delta": -0.008 },
+        { "code": "KKBK", "name": "Kotak Mahindra Bank", "weight": 0.12, "success_delta": 0.0 },
+        { "code": "RATN", "name": "RBL Bank", "weight": 0.1, "success_delta": -0.018 }
+      ],
+      "routes": [
+        { "id": "rt_card_acq_1", "weight": 0.55 },
+        { "id": "rt_card_acq_2", "weight": 0.45 }
+      ]
+    },
+    "netbanking": {
+      "weight": 0.12,
+      "baseline_success_rate": 0.884,
+      "banks": [
+        { "code": "SBIN", "name": "State Bank of India", "weight": 0.3, "success_delta": -0.02 },
+        { "code": "HDFC", "name": "HDFC Bank", "weight": 0.22, "success_delta": 0.01 },
+        { "code": "ICIC", "name": "ICICI Bank", "weight": 0.18, "success_delta": 0.005 },
+        { "code": "UTIB", "name": "Axis Bank", "weight": 0.15, "success_delta": -0.004 },
+        { "code": "KKBK", "name": "Kotak Mahindra Bank", "weight": 0.15, "success_delta": 0.002 }
+      ],
+      "routes": [{ "id": "rt_nb_direct", "weight": 1.0 }]
+    },
+    "wallet": {
+      "weight": 0.08,
+      "baseline_success_rate": 0.902,
+      "banks": [
+        { "code": "PYTM", "name": "Paytm Wallet", "weight": 0.45, "success_delta": 0.006 },
+        { "code": "PHPE", "name": "PhonePe Wallet", "weight": 0.3, "success_delta": 0.004 },
+        { "code": "MOBK", "name": "Mobikwik Wallet", "weight": 0.15, "success_delta": -0.012 },
+        { "code": "KKBK", "name": "Kotak 811 Wallet", "weight": 0.1, "success_delta": -0.008 }
+      ],
+      "routes": [{ "id": "rt_wallet_direct", "weight": 1.0 }]
+    }
+  },
+
+  "failure_class_mix": {
+    "SOFT": 0.8,
+    "HARD": 0.1,
+    "AMBIGUOUS": 0.06,
+    "UNKNOWN": 0.04
+  },
+
+  "failure_codes": [
+    { "code": "INSUFFICIENT_FUNDS", "class": "SOFT", "weight": 0.4, "methods": ["upi", "card", "netbanking", "wallet"] },
+    { "code": "ISSUER_UNAVAILABLE", "class": "SOFT", "weight": 0.2, "methods": ["upi", "card", "netbanking", "wallet"] },
+    { "code": "GATEWAY_TIMEOUT", "class": "SOFT", "weight": 0.14, "methods": ["upi", "card", "netbanking", "wallet"] },
+    { "code": "NETWORK_ERROR", "class": "SOFT", "weight": 0.08, "methods": ["upi", "card", "netbanking", "wallet"] },
+    { "code": "TRANSACTION_LIMIT_EXCEEDED", "class": "SOFT", "weight": 0.07, "methods": ["upi", "netbanking", "wallet"] },
+    { "code": "AUTH_TIMEOUT", "class": "SOFT", "weight": 0.06, "methods": ["upi", "card", "netbanking"] },
+    { "code": "CUSTOMER_CANCELLED", "class": "SOFT", "weight": 0.05, "methods": ["upi", "card", "netbanking", "wallet"] },
+
+    { "code": "CARD_EXPIRED", "class": "HARD", "weight": 0.28, "methods": ["card"] },
+    { "code": "INVALID_ACCOUNT", "class": "HARD", "weight": 0.22, "methods": ["upi", "card", "netbanking"] },
+    { "code": "ACCOUNT_CLOSED", "class": "HARD", "weight": 0.18, "methods": ["upi", "netbanking", "wallet"] },
+    { "code": "CARD_DISABLED_ONLINE", "class": "HARD", "weight": 0.16, "methods": ["card"] },
+    { "code": "CARD_LOST_OR_STOLEN", "class": "HARD", "weight": 0.06, "methods": ["card"] },
+    { "code": "INTERNATIONAL_NOT_ALLOWED", "class": "HARD", "weight": 0.06, "methods": ["card"] },
+    { "code": "FRAUD_SUSPECTED", "class": "HARD", "weight": 0.04, "methods": ["upi", "card", "netbanking", "wallet"] },
+
+    { "code": "DO_NOT_HONOUR", "class": "AMBIGUOUS", "weight": 0.75, "methods": ["upi", "card", "netbanking", "wallet"] },
+    { "code": "TECHNICAL_DECLINE", "class": "AMBIGUOUS", "weight": 0.25, "methods": ["upi", "card", "netbanking", "wallet"] }
+  ],
+
+  "unknown_raw_reasons": [
+    "issuer_node_offline",
+    "upi_deemed_pending",
+    "bank_reference_mismatch"
+  ],
+
+  "degradations": [
+    {
+      "label": "hdfc-upi-rail-degradation",
+      "method": "upi",
+      "issuer": "HDFC",
+      "route_id": null,
+      "starts_at": "2026-08-30T09:00:00+05:30",
+      "ends_at": "2026-08-30T21:00:00+05:30",
+      "degraded_success_rate": 0.34,
+      "dominant_failure_code": "ISSUER_UNAVAILABLE",
+      "dominant_share": 0.72,
+      "note": "The headline event: one issuer's UPI rail degrades for twelve hours. Same decline codes a single customer would produce, concentrated in one corridor."
+    },
+    {
+      "label": "card-acquirer-b-degradation",
+      "method": "card",
+      "issuer": null,
+      "route_id": "rt_card_acq_2",
+      "starts_at": "2026-08-31T14:00:00+05:30",
+      "ends_at": "2026-08-31T20:00:00+05:30",
+      "degraded_success_rate": 0.48,
+      "dominant_failure_code": "TECHNICAL_DECLINE",
+      "dominant_share": 0.6,
+      "note": "Deliberately harder: route-level rather than issuer-level, shorter, milder, lower volume. Engine 1 may well miss this one, and a missed detection reported honestly is worth more than a dataset tuned so nothing is ever missed."
+    }
+  ],
+
+  "decoys": [
+    {
+      "label": "mobikwik-wallet-low-volume-decoy",
+      "method": "wallet",
+      "issuer": "MOBK",
+      "issuer_name": "Mobikwik Wallet",
+      "route_id": "rt_wallet_direct",
+      "attempts_per_day": 3,
+      "baseline_success_rate": 0.74,
+      "note": "No degradation is injected here. Volume is so low that ordinary variance produces windows with zero successes. Flagging this corridor is a false positive and must be reported as one."
+    }
+  ]
+}

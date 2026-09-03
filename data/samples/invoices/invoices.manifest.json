@@ -1,0 +1,1198 @@
+{
+  "batch_id": "inv-s42-680b8a62",
+  "config": {
+    "fingerprint": "680b8a622f46",
+    "path": "data/generators/configs/invoices.default.json",
+    "resolved": {
+      "_comment": [
+        "The receivables ledger Engine 3 chases. Archetypes differ in behaviour, not",
+        "just in numbers: a reliably-slow payer who always pays and a chronic",
+        "delinquent can carry identical ageing and identical amounts, and the correct",
+        "escalation for them is not the same. Reply annotations (promise, date,",
+        "dispute) live in the manifest only — the engine has to read the text."
+      ],
+      "ageing_buckets": {
+        "1_30": {
+          "max_days_overdue": 30,
+          "min_days_overdue": 1,
+          "weight": 0.34
+        },
+        "31_60": {
+          "max_days_overdue": 60,
+          "min_days_overdue": 31,
+          "weight": 0.22
+        },
+        "61_90": {
+          "max_days_overdue": 90,
+          "min_days_overdue": 61,
+          "weight": 0.14
+        },
+        "90_plus": {
+          "max_days_overdue": 165,
+          "min_days_overdue": 91,
+          "weight": 0.1
+        },
+        "current": {
+          "max_days_overdue": 0,
+          "min_days_overdue": 0,
+          "weight": 0.2
+        }
+      },
+      "amount_buckets": {
+        "large": {
+          "max_paise": 90000000,
+          "min_paise": 30000000,
+          "weight": 0.2
+        },
+        "medium": {
+          "max_paise": 30000000,
+          "min_paise": 7500000,
+          "weight": 0.38
+        },
+        "small": {
+          "max_paise": 7500000,
+          "min_paise": 1500000,
+          "weight": 0.34
+        },
+        "very_large": {
+          "max_paise": 250000000,
+          "min_paise": 90000000,
+          "weight": 0.08
+        }
+      },
+      "archetype_promise_kept_rate": {
+        "chronic_delinquent": 0.1,
+        "disputing": 0.0,
+        "first_time_late": 0.6,
+        "reliable_slow": 0.9,
+        "silent": 0.0
+      },
+      "archetype_reply_mix": {
+        "chronic_delinquent": {
+          "conditional_promise": 0.36,
+          "explicit_promise": 0.26,
+          "vague_promise": 0.38
+        },
+        "disputing": {
+          "dispute": 0.82,
+          "vague_promise": 0.18
+        },
+        "first_time_late": {
+          "explicit_promise": 0.32,
+          "non_response": 0.22,
+          "vague_promise": 0.46
+        },
+        "reliable_slow": {
+          "explicit_promise": 0.72,
+          "vague_promise": 0.28
+        },
+        "silent": {
+          "non_response": 1.0
+        }
+      },
+      "archetypes": {
+        "chronic_delinquent": 0.22,
+        "disputing": 0.14,
+        "first_time_late": 0.24,
+        "reliable_slow": 0.26,
+        "silent": 0.14
+      },
+      "as_of": "2026-09-01T09:00:00+05:30",
+      "batch_prefix": "inv",
+      "customer_pool": 30,
+      "dataset": "invoices",
+      "invoice_count": 72,
+      "language_mix": {
+        "en": 0.62,
+        "hinglish": 0.38
+      },
+      "payment_terms": {
+        "NET15": 0.28,
+        "NET30": 0.52,
+        "NET45": 0.2
+      },
+      "reminder_ladder": {
+        "channel": "email",
+        "first_reminder_after_days": 3,
+        "max_rungs": 3,
+        "spacing_days": 7
+      },
+      "reply_probability": {
+        "chronic_delinquent": 0.8,
+        "disputing": 0.95,
+        "first_time_late": 0.75,
+        "reliable_slow": 0.9,
+        "silent": 0.25
+      },
+      "vague_promise_grace_days": 7
+    }
+  },
+  "dataset": "invoices",
+  "generator": {
+    "module": "data.generators.invoices",
+    "version": "1.0.0"
+  },
+  "ground_truth": {
+    "contract": "Promise/date/dispute annotations live here and nowhere else. Engine 3 reads `replies[].text` and must reach the same conclusions unaided — that is what makes its extraction accuracy a measurement rather than a claim.",
+    "per_invoice": {
+      "inv_0001": {
+        "ageing_bucket": "1_30",
+        "archetype": "reliable_slow",
+        "coverage_forced": false,
+        "has_reply": true,
+        "promise_kept": false
+      },
+      "inv_0002": {
+        "ageing_bucket": "current",
+        "archetype": "silent",
+        "coverage_forced": false,
+        "has_reply": false,
+        "promise_kept": null
+      },
+      "inv_0003": {
+        "ageing_bucket": "31_60",
+        "archetype": "first_time_late",
+        "coverage_forced": false,
+        "has_reply": false,
+        "promise_kept": null
+      },
+      "inv_0004": {
+        "ageing_bucket": "1_30",
+        "archetype": "first_time_late",
+        "coverage_forced": false,
+        "has_reply": true,
+        "promise_kept": null
+      },
+      "inv_0005": {
+        "ageing_bucket": "31_60",
+        "archetype": "first_time_late",
+        "coverage_forced": false,
+        "has_reply": true,
+        "promise_kept": null
+      },
+      "inv_0006": {
+        "ageing_bucket": "1_30",
+        "archetype": "chronic_delinquent",
+        "coverage_forced": false,
+        "has_reply": true,
+        "promise_kept": null
+      },
+      "inv_0007": {
+        "ageing_bucket": "31_60",
+        "archetype": "first_time_late",
+        "coverage_forced": false,
+        "has_reply": false,
+        "promise_kept": null
+      },
+      "inv_0008": {
+        "ageing_bucket": "1_30",
+        "archetype": "first_time_late",
+        "coverage_forced": false,
+        "has_reply": true,
+        "promise_kept": null
+      },
+      "inv_0009": {
+        "ageing_bucket": "90_plus",
+        "archetype": "reliable_slow",
+        "coverage_forced": false,
+        "has_reply": true,
+        "promise_kept": true
+      },
+      "inv_0010": {
+        "ageing_bucket": "current",
+        "archetype": "first_time_late",
+        "coverage_forced": false,
+        "has_reply": false,
+        "promise_kept": null
+      },
+      "inv_0011": {
+        "ageing_bucket": "61_90",
+        "archetype": "first_time_late",
+        "coverage_forced": false,
+        "has_reply": true,
+        "promise_kept": false
+      },
+      "inv_0012": {
+        "ageing_bucket": "current",
+        "archetype": "first_time_late",
+        "coverage_forced": false,
+        "has_reply": false,
+        "promise_kept": null
+      },
+      "inv_0013": {
+        "ageing_bucket": "1_30",
+        "archetype": "reliable_slow",
+        "coverage_forced": false,
+        "has_reply": true,
+        "promise_kept": null
+      },
+      "inv_0014": {
+        "ageing_bucket": "1_30",
+        "archetype": "reliable_slow",
+        "coverage_forced": false,
+        "has_reply": true,
+        "promise_kept": null
+      },
+      "inv_0015": {
+        "ageing_bucket": "1_30",
+        "archetype": "first_time_late",
+        "coverage_forced": false,
+        "has_reply": true,
+        "promise_kept": null
+      },
+      "inv_0016": {
+        "ageing_bucket": "current",
+        "archetype": "disputing",
+        "coverage_forced": false,
+        "has_reply": false,
+        "promise_kept": null
+      },
+      "inv_0017": {
+        "ageing_bucket": "current",
+        "archetype": "reliable_slow",
+        "coverage_forced": false,
+        "has_reply": false,
+        "promise_kept": null
+      },
+      "inv_0018": {
+        "ageing_bucket": "1_30",
+        "archetype": "silent",
+        "coverage_forced": false,
+        "has_reply": false,
+        "promise_kept": null
+      },
+      "inv_0019": {
+        "ageing_bucket": "90_plus",
+        "archetype": "disputing",
+        "coverage_forced": false,
+        "has_reply": true,
+        "promise_kept": null
+      },
+      "inv_0020": {
+        "ageing_bucket": "90_plus",
+        "archetype": "silent",
+        "coverage_forced": false,
+        "has_reply": false,
+        "promise_kept": null
+      },
+      "inv_0021": {
+        "ageing_bucket": "1_30",
+        "archetype": "silent",
+        "coverage_forced": false,
+        "has_reply": false,
+        "promise_kept": null
+      },
+      "inv_0022": {
+        "ageing_bucket": "current",
+        "archetype": "chronic_delinquent",
+        "coverage_forced": false,
+        "has_reply": false,
+        "promise_kept": null
+      },
+      "inv_0023": {
+        "ageing_bucket": "1_30",
+        "archetype": "chronic_delinquent",
+        "coverage_forced": false,
+        "has_reply": true,
+        "promise_kept": null
+      },
+      "inv_0024": {
+        "ageing_bucket": "current",
+        "archetype": "first_time_late",
+        "coverage_forced": false,
+        "has_reply": false,
+        "promise_kept": null
+      },
+      "inv_0025": {
+        "ageing_bucket": "current",
+        "archetype": "silent",
+        "coverage_forced": false,
+        "has_reply": false,
+        "promise_kept": null
+      },
+      "inv_0026": {
+        "ageing_bucket": "31_60",
+        "archetype": "silent",
+        "coverage_forced": false,
+        "has_reply": true,
+        "promise_kept": null
+      },
+      "inv_0027": {
+        "ageing_bucket": "90_plus",
+        "archetype": "silent",
+        "coverage_forced": false,
+        "has_reply": true,
+        "promise_kept": null
+      },
+      "inv_0028": {
+        "ageing_bucket": "31_60",
+        "archetype": "disputing",
+        "coverage_forced": false,
+        "has_reply": true,
+        "promise_kept": null
+      },
+      "inv_0029": {
+        "ageing_bucket": "61_90",
+        "archetype": "reliable_slow",
+        "coverage_forced": false,
+        "has_reply": true,
+        "promise_kept": true
+      },
+      "inv_0030": {
+        "ageing_bucket": "61_90",
+        "archetype": "silent",
+        "coverage_forced": false,
+        "has_reply": false,
+        "promise_kept": null
+      },
+      "inv_0031": {
+        "ageing_bucket": "61_90",
+        "archetype": "first_time_late",
+        "coverage_forced": false,
+        "has_reply": true,
+        "promise_kept": true
+      },
+      "inv_0032": {
+        "ageing_bucket": "31_60",
+        "archetype": "chronic_delinquent",
+        "coverage_forced": false,
+        "has_reply": true,
+        "promise_kept": false
+      },
+      "inv_0033": {
+        "ageing_bucket": "31_60",
+        "archetype": "disputing",
+        "coverage_forced": false,
+        "has_reply": true,
+        "promise_kept": null
+      },
+      "inv_0034": {
+        "ageing_bucket": "61_90",
+        "archetype": "first_time_late",
+        "coverage_forced": false,
+        "has_reply": true,
+        "promise_kept": true
+      },
+      "inv_0035": {
+        "ageing_bucket": "1_30",
+        "archetype": "disputing",
+        "coverage_forced": false,
+        "has_reply": false,
+        "promise_kept": null
+      },
+      "inv_0036": {
+        "ageing_bucket": "61_90",
+        "archetype": "reliable_slow",
+        "coverage_forced": false,
+        "has_reply": true,
+        "promise_kept": true
+      },
+      "inv_0037": {
+        "ageing_bucket": "90_plus",
+        "archetype": "chronic_delinquent",
+        "coverage_forced": false,
+        "has_reply": true,
+        "promise_kept": false
+      },
+      "inv_0038": {
+        "ageing_bucket": "61_90",
+        "archetype": "reliable_slow",
+        "coverage_forced": false,
+        "has_reply": true,
+        "promise_kept": true
+      },
+      "inv_0039": {
+        "ageing_bucket": "current",
+        "archetype": "reliable_slow",
+        "coverage_forced": false,
+        "has_reply": false,
+        "promise_kept": null
+      },
+      "inv_0040": {
+        "ageing_bucket": "current",
+        "archetype": "chronic_delinquent",
+        "coverage_forced": false,
+        "has_reply": false,
+        "promise_kept": null
+      },
+      "inv_0041": {
+        "ageing_bucket": "90_plus",
+        "archetype": "disputing",
+        "coverage_forced": false,
+        "has_reply": true,
+        "promise_kept": null
+      },
+      "inv_0042": {
+        "ageing_bucket": "31_60",
+        "archetype": "reliable_slow",
+        "coverage_forced": false,
+        "has_reply": true,
+        "promise_kept": true
+      },
+      "inv_0043": {
+        "ageing_bucket": "1_30",
+        "archetype": "reliable_slow",
+        "coverage_forced": false,
+        "has_reply": true,
+        "promise_kept": true
+      },
+      "inv_0044": {
+        "ageing_bucket": "31_60",
+        "archetype": "disputing",
+        "coverage_forced": false,
+        "has_reply": true,
+        "promise_kept": null
+      },
+      "inv_0045": {
+        "ageing_bucket": "1_30",
+        "archetype": "reliable_slow",
+        "coverage_forced": false,
+        "has_reply": false,
+        "promise_kept": null
+      },
+      "inv_0046": {
+        "ageing_bucket": "1_30",
+        "archetype": "reliable_slow",
+        "coverage_forced": false,
+        "has_reply": true,
+        "promise_kept": true
+      },
+      "inv_0047": {
+        "ageing_bucket": "31_60",
+        "archetype": "reliable_slow",
+        "coverage_forced": false,
+        "has_reply": true,
+        "promise_kept": true
+      },
+      "inv_0048": {
+        "ageing_bucket": "90_plus",
+        "archetype": "chronic_delinquent",
+        "coverage_forced": false,
+        "has_reply": false,
+        "promise_kept": null
+      },
+      "inv_0049": {
+        "ageing_bucket": "31_60",
+        "archetype": "silent",
+        "coverage_forced": false,
+        "has_reply": true,
+        "promise_kept": null
+      },
+      "inv_0050": {
+        "ageing_bucket": "1_30",
+        "archetype": "first_time_late",
+        "coverage_forced": false,
+        "has_reply": false,
+        "promise_kept": null
+      },
+      "inv_0051": {
+        "ageing_bucket": "1_30",
+        "archetype": "chronic_delinquent",
+        "coverage_forced": false,
+        "has_reply": true,
+        "promise_kept": null
+      },
+      "inv_0052": {
+        "ageing_bucket": "61_90",
+        "archetype": "reliable_slow",
+        "coverage_forced": false,
+        "has_reply": false,
+        "promise_kept": null
+      },
+      "inv_0053": {
+        "ageing_bucket": "90_plus",
+        "archetype": "chronic_delinquent",
+        "coverage_forced": false,
+        "has_reply": true,
+        "promise_kept": false
+      },
+      "inv_0054": {
+        "ageing_bucket": "1_30",
+        "archetype": "chronic_delinquent",
+        "coverage_forced": false,
+        "has_reply": false,
+        "promise_kept": null
+      },
+      "inv_0055": {
+        "ageing_bucket": "current",
+        "archetype": "reliable_slow",
+        "coverage_forced": false,
+        "has_reply": false,
+        "promise_kept": null
+      },
+      "inv_0056": {
+        "ageing_bucket": "current",
+        "archetype": "silent",
+        "coverage_forced": false,
+        "has_reply": false,
+        "promise_kept": null
+      },
+      "inv_0057": {
+        "ageing_bucket": "31_60",
+        "archetype": "reliable_slow",
+        "coverage_forced": false,
+        "has_reply": true,
+        "promise_kept": true
+      },
+      "inv_0058": {
+        "ageing_bucket": "31_60",
+        "archetype": "chronic_delinquent",
+        "coverage_forced": false,
+        "has_reply": true,
+        "promise_kept": false
+      },
+      "inv_0059": {
+        "ageing_bucket": "31_60",
+        "archetype": "disputing",
+        "coverage_forced": false,
+        "has_reply": true,
+        "promise_kept": null
+      },
+      "inv_0060": {
+        "ageing_bucket": "1_30",
+        "archetype": "chronic_delinquent",
+        "coverage_forced": false,
+        "has_reply": false,
+        "promise_kept": null
+      },
+      "inv_0061": {
+        "ageing_bucket": "current",
+        "archetype": "reliable_slow",
+        "coverage_forced": false,
+        "has_reply": false,
+        "promise_kept": null
+      },
+      "inv_0062": {
+        "ageing_bucket": "31_60",
+        "archetype": "reliable_slow",
+        "coverage_forced": false,
+        "has_reply": true,
+        "promise_kept": true
+      },
+      "inv_0063": {
+        "ageing_bucket": "1_30",
+        "archetype": "disputing",
+        "coverage_forced": false,
+        "has_reply": true,
+        "promise_kept": null
+      },
+      "inv_0064": {
+        "ageing_bucket": "1_30",
+        "archetype": "chronic_delinquent",
+        "coverage_forced": false,
+        "has_reply": true,
+        "promise_kept": null
+      },
+      "inv_0065": {
+        "ageing_bucket": "61_90",
+        "archetype": "chronic_delinquent",
+        "coverage_forced": false,
+        "has_reply": false,
+        "promise_kept": null
+      },
+      "inv_0066": {
+        "ageing_bucket": "1_30",
+        "archetype": "first_time_late",
+        "coverage_forced": false,
+        "has_reply": true,
+        "promise_kept": null
+      },
+      "inv_0067": {
+        "ageing_bucket": "current",
+        "archetype": "first_time_late",
+        "coverage_forced": false,
+        "has_reply": false,
+        "promise_kept": null
+      },
+      "inv_0068": {
+        "ageing_bucket": "31_60",
+        "archetype": "first_time_late",
+        "coverage_forced": false,
+        "has_reply": true,
+        "promise_kept": false
+      },
+      "inv_0069": {
+        "ageing_bucket": "1_30",
+        "archetype": "chronic_delinquent",
+        "coverage_forced": false,
+        "has_reply": true,
+        "promise_kept": false
+      },
+      "inv_0070": {
+        "ageing_bucket": "1_30",
+        "archetype": "first_time_late",
+        "coverage_forced": false,
+        "has_reply": false,
+        "promise_kept": null
+      },
+      "inv_0071": {
+        "ageing_bucket": "61_90",
+        "archetype": "disputing",
+        "coverage_forced": false,
+        "has_reply": true,
+        "promise_kept": null
+      },
+      "inv_0072": {
+        "ageing_bucket": "1_30",
+        "archetype": "chronic_delinquent",
+        "coverage_forced": false,
+        "has_reply": true,
+        "promise_kept": null
+      }
+    },
+    "per_reply": {
+      "inv_0001_in_1": {
+        "category": "vague_promise",
+        "date_confidence": "inferable",
+        "invoice_id": "inv_0001",
+        "is_conditional": false,
+        "is_dispute": false,
+        "is_promise": true,
+        "language": "hinglish",
+        "promise_kept": false,
+        "promised_date": "2026-08-31"
+      },
+      "inv_0004_in_1": {
+        "category": "explicit_promise",
+        "date_confidence": "explicit",
+        "invoice_id": "inv_0004",
+        "is_conditional": false,
+        "is_dispute": false,
+        "is_promise": true,
+        "language": "en",
+        "promise_kept": null,
+        "promised_date": "2026-09-06"
+      },
+      "inv_0005_in_1": {
+        "category": "non_response",
+        "date_confidence": "none",
+        "invoice_id": "inv_0005",
+        "is_conditional": false,
+        "is_dispute": false,
+        "is_promise": false,
+        "language": "en",
+        "promise_kept": null,
+        "promised_date": null
+      },
+      "inv_0006_in_1": {
+        "category": "conditional_promise",
+        "date_confidence": "none",
+        "invoice_id": "inv_0006",
+        "is_conditional": true,
+        "is_dispute": false,
+        "is_promise": true,
+        "language": "en",
+        "promise_kept": null,
+        "promised_date": null
+      },
+      "inv_0008_in_1": {
+        "category": "vague_promise",
+        "date_confidence": "none",
+        "invoice_id": "inv_0008",
+        "is_conditional": false,
+        "is_dispute": false,
+        "is_promise": true,
+        "language": "en",
+        "promise_kept": null,
+        "promised_date": null
+      },
+      "inv_0009_in_1": {
+        "category": "explicit_promise",
+        "date_confidence": "explicit",
+        "invoice_id": "inv_0009",
+        "is_conditional": false,
+        "is_dispute": false,
+        "is_promise": true,
+        "language": "en",
+        "promise_kept": true,
+        "promised_date": "2026-05-27"
+      },
+      "inv_0011_in_1": {
+        "category": "vague_promise",
+        "date_confidence": "none",
+        "invoice_id": "inv_0011",
+        "is_conditional": false,
+        "is_dispute": false,
+        "is_promise": true,
+        "language": "en",
+        "promise_kept": false,
+        "promised_date": null
+      },
+      "inv_0013_in_1": {
+        "category": "explicit_promise",
+        "date_confidence": "explicit",
+        "invoice_id": "inv_0013",
+        "is_conditional": false,
+        "is_dispute": false,
+        "is_promise": true,
+        "language": "hinglish",
+        "promise_kept": null,
+        "promised_date": "2026-09-06"
+      },
+      "inv_0014_in_1": {
+        "category": "explicit_promise",
+        "date_confidence": "explicit",
+        "invoice_id": "inv_0014",
+        "is_conditional": false,
+        "is_dispute": false,
+        "is_promise": true,
+        "language": "en",
+        "promise_kept": null,
+        "promised_date": "2026-09-06"
+      },
+      "inv_0015_in_1": {
+        "category": "vague_promise",
+        "date_confidence": "none",
+        "invoice_id": "inv_0015",
+        "is_conditional": false,
+        "is_dispute": false,
+        "is_promise": true,
+        "language": "hinglish",
+        "promise_kept": null,
+        "promised_date": null
+      },
+      "inv_0019_in_1": {
+        "category": "dispute",
+        "date_confidence": "none",
+        "invoice_id": "inv_0019",
+        "is_conditional": false,
+        "is_dispute": true,
+        "is_promise": false,
+        "language": "hinglish",
+        "promise_kept": null,
+        "promised_date": null
+      },
+      "inv_0023_in_1": {
+        "category": "explicit_promise",
+        "date_confidence": "explicit",
+        "invoice_id": "inv_0023",
+        "is_conditional": false,
+        "is_dispute": false,
+        "is_promise": true,
+        "language": "en",
+        "promise_kept": null,
+        "promised_date": "2026-09-02"
+      },
+      "inv_0026_in_1": {
+        "category": "non_response",
+        "date_confidence": "none",
+        "invoice_id": "inv_0026",
+        "is_conditional": false,
+        "is_dispute": false,
+        "is_promise": false,
+        "language": "hinglish",
+        "promise_kept": null,
+        "promised_date": null
+      },
+      "inv_0027_in_1": {
+        "category": "non_response",
+        "date_confidence": "none",
+        "invoice_id": "inv_0027",
+        "is_conditional": false,
+        "is_dispute": false,
+        "is_promise": false,
+        "language": "hinglish",
+        "promise_kept": null,
+        "promised_date": null
+      },
+      "inv_0028_in_1": {
+        "category": "dispute",
+        "date_confidence": "none",
+        "invoice_id": "inv_0028",
+        "is_conditional": false,
+        "is_dispute": true,
+        "is_promise": false,
+        "language": "hinglish",
+        "promise_kept": null,
+        "promised_date": null
+      },
+      "inv_0029_in_1": {
+        "category": "vague_promise",
+        "date_confidence": "none",
+        "invoice_id": "inv_0029",
+        "is_conditional": false,
+        "is_dispute": false,
+        "is_promise": true,
+        "language": "en",
+        "promise_kept": true,
+        "promised_date": null
+      },
+      "inv_0031_in_1": {
+        "category": "vague_promise",
+        "date_confidence": "inferable",
+        "invoice_id": "inv_0031",
+        "is_conditional": false,
+        "is_dispute": false,
+        "is_promise": true,
+        "language": "en",
+        "promise_kept": true,
+        "promised_date": "2026-07-31"
+      },
+      "inv_0032_in_1": {
+        "category": "vague_promise",
+        "date_confidence": "inferable",
+        "invoice_id": "inv_0032",
+        "is_conditional": false,
+        "is_dispute": false,
+        "is_promise": true,
+        "language": "en",
+        "promise_kept": false,
+        "promised_date": "2026-07-31"
+      },
+      "inv_0033_in_1": {
+        "category": "dispute",
+        "date_confidence": "none",
+        "invoice_id": "inv_0033",
+        "is_conditional": false,
+        "is_dispute": true,
+        "is_promise": false,
+        "language": "en",
+        "promise_kept": null,
+        "promised_date": null
+      },
+      "inv_0034_in_1": {
+        "category": "explicit_promise",
+        "date_confidence": "explicit",
+        "invoice_id": "inv_0034",
+        "is_conditional": false,
+        "is_dispute": false,
+        "is_promise": true,
+        "language": "hinglish",
+        "promise_kept": true,
+        "promised_date": "2026-07-24"
+      },
+      "inv_0036_in_1": {
+        "category": "vague_promise",
+        "date_confidence": "inferable",
+        "invoice_id": "inv_0036",
+        "is_conditional": false,
+        "is_dispute": false,
+        "is_promise": true,
+        "language": "hinglish",
+        "promise_kept": true,
+        "promised_date": "2026-07-31"
+      },
+      "inv_0037_in_1": {
+        "category": "explicit_promise",
+        "date_confidence": "explicit",
+        "invoice_id": "inv_0037",
+        "is_conditional": false,
+        "is_dispute": false,
+        "is_promise": true,
+        "language": "hinglish",
+        "promise_kept": false,
+        "promised_date": "2026-05-15"
+      },
+      "inv_0038_in_1": {
+        "category": "explicit_promise",
+        "date_confidence": "explicit",
+        "invoice_id": "inv_0038",
+        "is_conditional": false,
+        "is_dispute": false,
+        "is_promise": true,
+        "language": "en",
+        "promise_kept": true,
+        "promised_date": "2026-07-21"
+      },
+      "inv_0041_in_1": {
+        "category": "dispute",
+        "date_confidence": "none",
+        "invoice_id": "inv_0041",
+        "is_conditional": false,
+        "is_dispute": true,
+        "is_promise": false,
+        "language": "en",
+        "promise_kept": null,
+        "promised_date": null
+      },
+      "inv_0042_in_1": {
+        "category": "explicit_promise",
+        "date_confidence": "explicit",
+        "invoice_id": "inv_0042",
+        "is_conditional": false,
+        "is_dispute": false,
+        "is_promise": true,
+        "language": "hinglish",
+        "promise_kept": true,
+        "promised_date": "2026-08-18"
+      },
+      "inv_0043_in_1": {
+        "category": "vague_promise",
+        "date_confidence": "inferable",
+        "invoice_id": "inv_0043",
+        "is_conditional": false,
+        "is_dispute": false,
+        "is_promise": true,
+        "language": "en",
+        "promise_kept": true,
+        "promised_date": "2026-08-31"
+      },
+      "inv_0044_in_1": {
+        "category": "dispute",
+        "date_confidence": "none",
+        "invoice_id": "inv_0044",
+        "is_conditional": false,
+        "is_dispute": true,
+        "is_promise": false,
+        "language": "hinglish",
+        "promise_kept": null,
+        "promised_date": null
+      },
+      "inv_0046_in_1": {
+        "category": "vague_promise",
+        "date_confidence": "none",
+        "invoice_id": "inv_0046",
+        "is_conditional": false,
+        "is_dispute": false,
+        "is_promise": true,
+        "language": "en",
+        "promise_kept": true,
+        "promised_date": null
+      },
+      "inv_0047_in_1": {
+        "category": "explicit_promise",
+        "date_confidence": "explicit",
+        "invoice_id": "inv_0047",
+        "is_conditional": false,
+        "is_dispute": false,
+        "is_promise": true,
+        "language": "hinglish",
+        "promise_kept": true,
+        "promised_date": "2026-08-20"
+      },
+      "inv_0049_in_1": {
+        "category": "non_response",
+        "date_confidence": "none",
+        "invoice_id": "inv_0049",
+        "is_conditional": false,
+        "is_dispute": false,
+        "is_promise": false,
+        "language": "en",
+        "promise_kept": null,
+        "promised_date": null
+      },
+      "inv_0051_in_1": {
+        "category": "vague_promise",
+        "date_confidence": "none",
+        "invoice_id": "inv_0051",
+        "is_conditional": false,
+        "is_dispute": false,
+        "is_promise": true,
+        "language": "hinglish",
+        "promise_kept": null,
+        "promised_date": null
+      },
+      "inv_0053_in_1": {
+        "category": "explicit_promise",
+        "date_confidence": "explicit",
+        "invoice_id": "inv_0053",
+        "is_conditional": false,
+        "is_dispute": false,
+        "is_promise": true,
+        "language": "hinglish",
+        "promise_kept": false,
+        "promised_date": "2026-04-18"
+      },
+      "inv_0057_in_1": {
+        "category": "explicit_promise",
+        "date_confidence": "explicit",
+        "invoice_id": "inv_0057",
+        "is_conditional": false,
+        "is_dispute": false,
+        "is_promise": true,
+        "language": "en",
+        "promise_kept": true,
+        "promised_date": "2026-08-19"
+      },
+      "inv_0058_in_1": {
+        "category": "conditional_promise",
+        "date_confidence": "none",
+        "invoice_id": "inv_0058",
+        "is_conditional": true,
+        "is_dispute": false,
+        "is_promise": true,
+        "language": "en",
+        "promise_kept": false,
+        "promised_date": null
+      },
+      "inv_0059_in_1": {
+        "category": "dispute",
+        "date_confidence": "none",
+        "invoice_id": "inv_0059",
+        "is_conditional": false,
+        "is_dispute": true,
+        "is_promise": false,
+        "language": "hinglish",
+        "promise_kept": null,
+        "promised_date": null
+      },
+      "inv_0062_in_1": {
+        "category": "explicit_promise",
+        "date_confidence": "explicit",
+        "invoice_id": "inv_0062",
+        "is_conditional": false,
+        "is_dispute": false,
+        "is_promise": true,
+        "language": "en",
+        "promise_kept": true,
+        "promised_date": "2026-08-12"
+      },
+      "inv_0063_in_1": {
+        "category": "dispute",
+        "date_confidence": "none",
+        "invoice_id": "inv_0063",
+        "is_conditional": false,
+        "is_dispute": true,
+        "is_promise": false,
+        "language": "en",
+        "promise_kept": null,
+        "promised_date": null
+      },
+      "inv_0064_in_1": {
+        "category": "conditional_promise",
+        "date_confidence": "none",
+        "invoice_id": "inv_0064",
+        "is_conditional": true,
+        "is_dispute": false,
+        "is_promise": true,
+        "language": "en",
+        "promise_kept": null,
+        "promised_date": null
+      },
+      "inv_0066_in_1": {
+        "category": "non_response",
+        "date_confidence": "none",
+        "invoice_id": "inv_0066",
+        "is_conditional": false,
+        "is_dispute": false,
+        "is_promise": false,
+        "language": "en",
+        "promise_kept": null,
+        "promised_date": null
+      },
+      "inv_0068_in_1": {
+        "category": "vague_promise",
+        "date_confidence": "inferable",
+        "invoice_id": "inv_0068",
+        "is_conditional": false,
+        "is_dispute": false,
+        "is_promise": true,
+        "language": "hinglish",
+        "promise_kept": false,
+        "promised_date": "2026-08-31"
+      },
+      "inv_0069_in_1": {
+        "category": "explicit_promise",
+        "date_confidence": "explicit",
+        "invoice_id": "inv_0069",
+        "is_conditional": false,
+        "is_dispute": false,
+        "is_promise": true,
+        "language": "en",
+        "promise_kept": false,
+        "promised_date": "2026-08-25"
+      },
+      "inv_0071_in_1": {
+        "category": "dispute",
+        "date_confidence": "none",
+        "invoice_id": "inv_0071",
+        "is_conditional": false,
+        "is_dispute": true,
+        "is_promise": false,
+        "language": "en",
+        "promise_kept": null,
+        "promised_date": null
+      },
+      "inv_0072_in_1": {
+        "category": "vague_promise",
+        "date_confidence": "none",
+        "invoice_id": "inv_0072",
+        "is_conditional": false,
+        "is_dispute": false,
+        "is_promise": true,
+        "language": "en",
+        "promise_kept": null,
+        "promised_date": null
+      }
+    }
+  },
+  "manifest_version": 1,
+  "measured": {
+    "ageing_buckets": {
+      "1_30": {
+        "invoices": 24,
+        "value_paise": 712866000,
+        "value_share": 0.2667
+      },
+      "31_60": {
+        "invoices": 16,
+        "value_paise": 564780200,
+        "value_share": 0.2113
+      },
+      "61_90": {
+        "invoices": 10,
+        "value_paise": 600435000,
+        "value_share": 0.2246
+      },
+      "90_plus": {
+        "invoices": 8,
+        "value_paise": 404630100,
+        "value_share": 0.1514
+      },
+      "current": {
+        "invoices": 14,
+        "value_paise": 390554900,
+        "value_share": 0.1461
+      }
+    },
+    "archetype_counts": {
+      "chronic_delinquent": 16,
+      "disputing": 10,
+      "first_time_late": 17,
+      "reliable_slow": 19,
+      "silent": 10
+    },
+    "disputes": 8,
+    "invoices": 72,
+    "invoices_with_reply": 43,
+    "max_ladder_rung_used": 3,
+    "outbound_messages": 150,
+    "overdue_value_paise": 1353290800,
+    "promises": {
+      "broken": 8,
+      "conditional": 3,
+      "kept": 12,
+      "pending": 10,
+      "total": 30,
+      "undateable": 10,
+      "with_explicit_date": 14,
+      "with_inferable_date": 6
+    },
+    "reply_category_counts": {
+      "conditional_promise": 3,
+      "dispute": 8,
+      "explicit_promise": 14,
+      "non_response": 5,
+      "vague_promise": 13
+    },
+    "reply_language_counts": {
+      "en": 26,
+      "hinglish": 17
+    },
+    "status_counts": {
+      "open": 14,
+      "overdue": 46,
+      "paid": 12
+    },
+    "total_value_paise": 2673266200
+  },
+  "nondeterministic": {
+    "generated_at": "2026-09-03T21:46:01Z"
+  },
+  "output": {
+    "file": "invoices.jsonl",
+    "rows": 72,
+    "sha256": "5741e80c1abe8b960ab48bce02b485408df7666f5591e833fd50bc96058fad2f"
+  },
+  "seed": 42
+}

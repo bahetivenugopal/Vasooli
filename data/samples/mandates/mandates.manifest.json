@@ -1,0 +1,745 @@
+{
+  "batch_id": "mnd-s42-dabc793d",
+  "config": {
+    "fingerprint": "dabc793d151f",
+    "path": "data/generators/configs/mandates.default.json",
+    "resolved": {
+      "_comment": [
+        "The mandate book Engine 2 works from. Cohort shares are allocated exactly,",
+        "not sampled: several acceptance criteria are 'this case is present', and a",
+        "revoked mandate that only shows up on some seeds is not a test.",
+        "The AFA threshold below is REGULATORY (rbi-mandate-rules:A3), not ours — it",
+        "sits in the config only so the amount buckets can be read against it."
+      ],
+      "afa_registration_gap_rate": 0.06,
+      "afa_threshold_paise": 1500000,
+      "amount_buckets": {
+        "above_afa_large": {
+          "max_paise": 7500000,
+          "min_paise": 2200000,
+          "weight": 0.2
+        },
+        "above_afa_near_threshold": {
+          "max_paise": 2200000,
+          "min_paise": 1500100,
+          "weight": 0.2
+        },
+        "below_afa_near_threshold": {
+          "max_paise": 1499900,
+          "min_paise": 900000,
+          "weight": 0.24
+        },
+        "below_afa_small": {
+          "max_paise": 299900,
+          "min_paise": 19900,
+          "weight": 0.36
+        }
+      },
+      "as_of": "2026-09-01T09:00:00+05:30",
+      "batch_prefix": "mnd",
+      "cohorts": {
+        "cap_reached": 0.11,
+        "first_failure": 0.22,
+        "healthy": 0.28,
+        "notice_violation": 0.06,
+        "paused": 0.07,
+        "repeat_failure": 0.16,
+        "revoked_mid_sequence": 0.1
+      },
+      "customer_pool": 52,
+      "cycle_history_cycles": {
+        "max": 4,
+        "min": 1
+      },
+      "dataset": "mandates",
+      "failure_codes": [
+        {
+          "class": "SOFT",
+          "code": "INSUFFICIENT_FUNDS",
+          "weight": 0.46
+        },
+        {
+          "class": "SOFT",
+          "code": "ISSUER_UNAVAILABLE",
+          "weight": 0.16
+        },
+        {
+          "class": "SOFT",
+          "code": "GATEWAY_TIMEOUT",
+          "weight": 0.1
+        },
+        {
+          "class": "SOFT",
+          "code": "TRANSACTION_LIMIT_EXCEEDED",
+          "weight": 0.08
+        },
+        {
+          "class": "AMBIGUOUS",
+          "code": "DO_NOT_HONOUR",
+          "weight": 0.08
+        },
+        {
+          "class": "HARD",
+          "code": "ACCOUNT_CLOSED",
+          "weight": 0.05
+        },
+        {
+          "class": "HARD",
+          "code": "CARD_EXPIRED",
+          "weight": 0.04
+        },
+        {
+          "class": "POLICY_BLOCK",
+          "code": "AFA_REQUIRED",
+          "requires_above_afa_threshold": true,
+          "weight": 0.03
+        }
+      ],
+      "frequencies": {
+        "monthly": 0.7,
+        "quarterly": 0.14,
+        "weekly": 0.16
+      },
+      "mandate_cap_multiplier": {
+        "max": 1.5,
+        "min": 1.0
+      },
+      "mandate_count": 64,
+      "next_debit_offset_hours": {
+        "max": 56,
+        "min": 8
+      },
+      "notice_profiles": {
+        "late": 0.1,
+        "missing": 0.07,
+        "on_time": 0.74,
+        "stale": 0.09
+      },
+      "notice_violation_next_debit_offset_hours": {
+        "max": 44,
+        "min": 26
+      },
+      "notice_windows_hours": {
+        "late": {
+          "max": 23,
+          "min": 2
+        },
+        "on_time": {
+          "max": 48,
+          "min": 24
+        },
+        "stale": {
+          "max": 96,
+          "min": 50
+        }
+      },
+      "registration_lookback_days": {
+        "max": 420,
+        "min": 45
+      },
+      "retry_spacing_hours": {
+        "max": 34,
+        "min": 24
+      },
+      "terminal_failure_code": "MANDATE_REVOKED"
+    }
+  },
+  "dataset": "mandates",
+  "generator": {
+    "module": "data.generators.mandates",
+    "version": "1.0.0"
+  },
+  "ground_truth": {
+    "cohort_counts": {
+      "cap_reached": 7,
+      "first_failure": 14,
+      "healthy": 17,
+      "notice_violation": 4,
+      "paused": 5,
+      "repeat_failure": 10,
+      "revoked_mid_sequence": 7
+    },
+    "contract": "Cohort labels, notice profiles and registration gaps are how each record was built. None of them appear in the records themselves — Engine 2 has to derive the same conclusions from the timestamps and statuses, which is the whole point.",
+    "next_debit_notice_profile_counts": {
+      "late": 10,
+      "missing": 6,
+      "not_yet_due": 10,
+      "on_time": 35,
+      "stale": 3
+    },
+    "per_mandate": {
+      "mnd_0001": {
+        "afa_registration_gap": false,
+        "afa_side": "below",
+        "cohort": "healthy",
+        "failed_attempts_in_current_cycle": 0,
+        "next_debit_notice_profile": "on_time",
+        "terminal_failure_code": null
+      },
+      "mnd_0002": {
+        "afa_registration_gap": false,
+        "afa_side": "above",
+        "cohort": "repeat_failure",
+        "failed_attempts_in_current_cycle": 2,
+        "next_debit_notice_profile": "on_time",
+        "terminal_failure_code": null
+      },
+      "mnd_0003": {
+        "afa_registration_gap": false,
+        "afa_side": "above",
+        "cohort": "cap_reached",
+        "failed_attempts_in_current_cycle": 3,
+        "next_debit_notice_profile": "on_time",
+        "terminal_failure_code": null
+      },
+      "mnd_0004": {
+        "afa_registration_gap": false,
+        "afa_side": "below",
+        "cohort": "first_failure",
+        "failed_attempts_in_current_cycle": 1,
+        "next_debit_notice_profile": "missing",
+        "terminal_failure_code": null
+      },
+      "mnd_0005": {
+        "afa_registration_gap": false,
+        "afa_side": "below",
+        "cohort": "repeat_failure",
+        "failed_attempts_in_current_cycle": 2,
+        "next_debit_notice_profile": "late",
+        "terminal_failure_code": null
+      },
+      "mnd_0006": {
+        "afa_registration_gap": false,
+        "afa_side": "above",
+        "cohort": "paused",
+        "failed_attempts_in_current_cycle": 1,
+        "next_debit_notice_profile": "on_time",
+        "terminal_failure_code": null
+      },
+      "mnd_0007": {
+        "afa_registration_gap": false,
+        "afa_side": "below",
+        "cohort": "first_failure",
+        "failed_attempts_in_current_cycle": 1,
+        "next_debit_notice_profile": "missing",
+        "terminal_failure_code": null
+      },
+      "mnd_0008": {
+        "afa_registration_gap": true,
+        "afa_side": "above",
+        "cohort": "first_failure",
+        "failed_attempts_in_current_cycle": 1,
+        "next_debit_notice_profile": "on_time",
+        "terminal_failure_code": null
+      },
+      "mnd_0009": {
+        "afa_registration_gap": false,
+        "afa_side": "below",
+        "cohort": "first_failure",
+        "failed_attempts_in_current_cycle": 1,
+        "next_debit_notice_profile": "late",
+        "terminal_failure_code": null
+      },
+      "mnd_0010": {
+        "afa_registration_gap": false,
+        "afa_side": "below",
+        "cohort": "healthy",
+        "failed_attempts_in_current_cycle": 0,
+        "next_debit_notice_profile": "on_time",
+        "terminal_failure_code": null
+      },
+      "mnd_0011": {
+        "afa_registration_gap": true,
+        "afa_side": "below",
+        "cohort": "cap_reached",
+        "failed_attempts_in_current_cycle": 3,
+        "next_debit_notice_profile": "missing",
+        "terminal_failure_code": null
+      },
+      "mnd_0012": {
+        "afa_registration_gap": false,
+        "afa_side": "above",
+        "cohort": "paused",
+        "failed_attempts_in_current_cycle": 1,
+        "next_debit_notice_profile": "on_time",
+        "terminal_failure_code": null
+      },
+      "mnd_0013": {
+        "afa_registration_gap": false,
+        "afa_side": "below",
+        "cohort": "revoked_mid_sequence",
+        "failed_attempts_in_current_cycle": 2,
+        "next_debit_notice_profile": "on_time",
+        "terminal_failure_code": "MANDATE_REVOKED"
+      },
+      "mnd_0014": {
+        "afa_registration_gap": false,
+        "afa_side": "below",
+        "cohort": "healthy",
+        "failed_attempts_in_current_cycle": 0,
+        "next_debit_notice_profile": "on_time",
+        "terminal_failure_code": null
+      },
+      "mnd_0015": {
+        "afa_registration_gap": false,
+        "afa_side": "below",
+        "cohort": "healthy",
+        "failed_attempts_in_current_cycle": 0,
+        "next_debit_notice_profile": "on_time",
+        "terminal_failure_code": null
+      },
+      "mnd_0016": {
+        "afa_registration_gap": false,
+        "afa_side": "above",
+        "cohort": "first_failure",
+        "failed_attempts_in_current_cycle": 1,
+        "next_debit_notice_profile": "late",
+        "terminal_failure_code": null
+      },
+      "mnd_0017": {
+        "afa_registration_gap": false,
+        "afa_side": "below",
+        "cohort": "healthy",
+        "failed_attempts_in_current_cycle": 0,
+        "next_debit_notice_profile": "missing",
+        "terminal_failure_code": null
+      },
+      "mnd_0018": {
+        "afa_registration_gap": false,
+        "afa_side": "above",
+        "cohort": "paused",
+        "failed_attempts_in_current_cycle": 1,
+        "next_debit_notice_profile": "on_time",
+        "terminal_failure_code": null
+      },
+      "mnd_0019": {
+        "afa_registration_gap": false,
+        "afa_side": "above",
+        "cohort": "repeat_failure",
+        "failed_attempts_in_current_cycle": 2,
+        "next_debit_notice_profile": "on_time",
+        "terminal_failure_code": null
+      },
+      "mnd_0020": {
+        "afa_registration_gap": false,
+        "afa_side": "above",
+        "cohort": "revoked_mid_sequence",
+        "failed_attempts_in_current_cycle": 2,
+        "next_debit_notice_profile": "on_time",
+        "terminal_failure_code": "MANDATE_REVOKED"
+      },
+      "mnd_0021": {
+        "afa_registration_gap": false,
+        "afa_side": "below",
+        "cohort": "revoked_mid_sequence",
+        "failed_attempts_in_current_cycle": 2,
+        "next_debit_notice_profile": "on_time",
+        "terminal_failure_code": "MANDATE_REVOKED"
+      },
+      "mnd_0022": {
+        "afa_registration_gap": false,
+        "afa_side": "above",
+        "cohort": "repeat_failure",
+        "failed_attempts_in_current_cycle": 2,
+        "next_debit_notice_profile": "late",
+        "terminal_failure_code": null
+      },
+      "mnd_0023": {
+        "afa_registration_gap": false,
+        "afa_side": "above",
+        "cohort": "healthy",
+        "failed_attempts_in_current_cycle": 0,
+        "next_debit_notice_profile": "on_time",
+        "terminal_failure_code": null
+      },
+      "mnd_0024": {
+        "afa_registration_gap": false,
+        "afa_side": "above",
+        "cohort": "healthy",
+        "failed_attempts_in_current_cycle": 0,
+        "next_debit_notice_profile": "not_yet_due",
+        "terminal_failure_code": null
+      },
+      "mnd_0025": {
+        "afa_registration_gap": false,
+        "afa_side": "below",
+        "cohort": "healthy",
+        "failed_attempts_in_current_cycle": 0,
+        "next_debit_notice_profile": "not_yet_due",
+        "terminal_failure_code": null
+      },
+      "mnd_0026": {
+        "afa_registration_gap": false,
+        "afa_side": "below",
+        "cohort": "healthy",
+        "failed_attempts_in_current_cycle": 0,
+        "next_debit_notice_profile": "not_yet_due",
+        "terminal_failure_code": null
+      },
+      "mnd_0027": {
+        "afa_registration_gap": false,
+        "afa_side": "below",
+        "cohort": "repeat_failure",
+        "failed_attempts_in_current_cycle": 2,
+        "next_debit_notice_profile": "on_time",
+        "terminal_failure_code": null
+      },
+      "mnd_0028": {
+        "afa_registration_gap": false,
+        "afa_side": "below",
+        "cohort": "repeat_failure",
+        "failed_attempts_in_current_cycle": 2,
+        "next_debit_notice_profile": "on_time",
+        "terminal_failure_code": null
+      },
+      "mnd_0029": {
+        "afa_registration_gap": false,
+        "afa_side": "above",
+        "cohort": "healthy",
+        "failed_attempts_in_current_cycle": 0,
+        "next_debit_notice_profile": "on_time",
+        "terminal_failure_code": null
+      },
+      "mnd_0030": {
+        "afa_registration_gap": false,
+        "afa_side": "below",
+        "cohort": "first_failure",
+        "failed_attempts_in_current_cycle": 1,
+        "next_debit_notice_profile": "not_yet_due",
+        "terminal_failure_code": null
+      },
+      "mnd_0031": {
+        "afa_registration_gap": false,
+        "afa_side": "above",
+        "cohort": "first_failure",
+        "failed_attempts_in_current_cycle": 1,
+        "next_debit_notice_profile": "on_time",
+        "terminal_failure_code": null
+      },
+      "mnd_0032": {
+        "afa_registration_gap": false,
+        "afa_side": "below",
+        "cohort": "first_failure",
+        "failed_attempts_in_current_cycle": 1,
+        "next_debit_notice_profile": "not_yet_due",
+        "terminal_failure_code": null
+      },
+      "mnd_0033": {
+        "afa_registration_gap": false,
+        "afa_side": "below",
+        "cohort": "healthy",
+        "failed_attempts_in_current_cycle": 0,
+        "next_debit_notice_profile": "on_time",
+        "terminal_failure_code": null
+      },
+      "mnd_0034": {
+        "afa_registration_gap": false,
+        "afa_side": "below",
+        "cohort": "revoked_mid_sequence",
+        "failed_attempts_in_current_cycle": 2,
+        "next_debit_notice_profile": "on_time",
+        "terminal_failure_code": "MANDATE_REVOKED"
+      },
+      "mnd_0035": {
+        "afa_registration_gap": false,
+        "afa_side": "above",
+        "cohort": "repeat_failure",
+        "failed_attempts_in_current_cycle": 2,
+        "next_debit_notice_profile": "on_time",
+        "terminal_failure_code": null
+      },
+      "mnd_0036": {
+        "afa_registration_gap": false,
+        "afa_side": "below",
+        "cohort": "repeat_failure",
+        "failed_attempts_in_current_cycle": 2,
+        "next_debit_notice_profile": "on_time",
+        "terminal_failure_code": null
+      },
+      "mnd_0037": {
+        "afa_registration_gap": false,
+        "afa_side": "above",
+        "cohort": "healthy",
+        "failed_attempts_in_current_cycle": 0,
+        "next_debit_notice_profile": "not_yet_due",
+        "terminal_failure_code": null
+      },
+      "mnd_0038": {
+        "afa_registration_gap": false,
+        "afa_side": "above",
+        "cohort": "first_failure",
+        "failed_attempts_in_current_cycle": 1,
+        "next_debit_notice_profile": "late",
+        "terminal_failure_code": null
+      },
+      "mnd_0039": {
+        "afa_registration_gap": false,
+        "afa_side": "below",
+        "cohort": "revoked_mid_sequence",
+        "failed_attempts_in_current_cycle": 2,
+        "next_debit_notice_profile": "on_time",
+        "terminal_failure_code": "MANDATE_REVOKED"
+      },
+      "mnd_0040": {
+        "afa_registration_gap": false,
+        "afa_side": "below",
+        "cohort": "repeat_failure",
+        "failed_attempts_in_current_cycle": 2,
+        "next_debit_notice_profile": "on_time",
+        "terminal_failure_code": null
+      },
+      "mnd_0041": {
+        "afa_registration_gap": false,
+        "afa_side": "below",
+        "cohort": "notice_violation",
+        "failed_attempts_in_current_cycle": 0,
+        "next_debit_notice_profile": "late",
+        "terminal_failure_code": null
+      },
+      "mnd_0042": {
+        "afa_registration_gap": false,
+        "afa_side": "below",
+        "cohort": "cap_reached",
+        "failed_attempts_in_current_cycle": 3,
+        "next_debit_notice_profile": "on_time",
+        "terminal_failure_code": null
+      },
+      "mnd_0043": {
+        "afa_registration_gap": false,
+        "afa_side": "above",
+        "cohort": "first_failure",
+        "failed_attempts_in_current_cycle": 1,
+        "next_debit_notice_profile": "on_time",
+        "terminal_failure_code": null
+      },
+      "mnd_0044": {
+        "afa_registration_gap": false,
+        "afa_side": "below",
+        "cohort": "notice_violation",
+        "failed_attempts_in_current_cycle": 0,
+        "next_debit_notice_profile": "stale",
+        "terminal_failure_code": null
+      },
+      "mnd_0045": {
+        "afa_registration_gap": false,
+        "afa_side": "below",
+        "cohort": "cap_reached",
+        "failed_attempts_in_current_cycle": 3,
+        "next_debit_notice_profile": "on_time",
+        "terminal_failure_code": null
+      },
+      "mnd_0046": {
+        "afa_registration_gap": false,
+        "afa_side": "below",
+        "cohort": "first_failure",
+        "failed_attempts_in_current_cycle": 1,
+        "next_debit_notice_profile": "on_time",
+        "terminal_failure_code": null
+      },
+      "mnd_0047": {
+        "afa_registration_gap": false,
+        "afa_side": "above",
+        "cohort": "cap_reached",
+        "failed_attempts_in_current_cycle": 3,
+        "next_debit_notice_profile": "on_time",
+        "terminal_failure_code": null
+      },
+      "mnd_0048": {
+        "afa_registration_gap": false,
+        "afa_side": "below",
+        "cohort": "paused",
+        "failed_attempts_in_current_cycle": 1,
+        "next_debit_notice_profile": "not_yet_due",
+        "terminal_failure_code": null
+      },
+      "mnd_0049": {
+        "afa_registration_gap": false,
+        "afa_side": "below",
+        "cohort": "healthy",
+        "failed_attempts_in_current_cycle": 0,
+        "next_debit_notice_profile": "late",
+        "terminal_failure_code": null
+      },
+      "mnd_0050": {
+        "afa_registration_gap": false,
+        "afa_side": "above",
+        "cohort": "cap_reached",
+        "failed_attempts_in_current_cycle": 3,
+        "next_debit_notice_profile": "stale",
+        "terminal_failure_code": null
+      },
+      "mnd_0051": {
+        "afa_registration_gap": false,
+        "afa_side": "above",
+        "cohort": "paused",
+        "failed_attempts_in_current_cycle": 1,
+        "next_debit_notice_profile": "not_yet_due",
+        "terminal_failure_code": null
+      },
+      "mnd_0052": {
+        "afa_registration_gap": false,
+        "afa_side": "above",
+        "cohort": "notice_violation",
+        "failed_attempts_in_current_cycle": 0,
+        "next_debit_notice_profile": "missing",
+        "terminal_failure_code": null
+      },
+      "mnd_0053": {
+        "afa_registration_gap": true,
+        "afa_side": "below",
+        "cohort": "revoked_mid_sequence",
+        "failed_attempts_in_current_cycle": 2,
+        "next_debit_notice_profile": "late",
+        "terminal_failure_code": "MANDATE_REVOKED"
+      },
+      "mnd_0054": {
+        "afa_registration_gap": false,
+        "afa_side": "below",
+        "cohort": "first_failure",
+        "failed_attempts_in_current_cycle": 1,
+        "next_debit_notice_profile": "stale",
+        "terminal_failure_code": null
+      },
+      "mnd_0055": {
+        "afa_registration_gap": false,
+        "afa_side": "below",
+        "cohort": "healthy",
+        "failed_attempts_in_current_cycle": 0,
+        "next_debit_notice_profile": "on_time",
+        "terminal_failure_code": null
+      },
+      "mnd_0056": {
+        "afa_registration_gap": false,
+        "afa_side": "above",
+        "cohort": "healthy",
+        "failed_attempts_in_current_cycle": 0,
+        "next_debit_notice_profile": "missing",
+        "terminal_failure_code": null
+      },
+      "mnd_0057": {
+        "afa_registration_gap": false,
+        "afa_side": "below",
+        "cohort": "revoked_mid_sequence",
+        "failed_attempts_in_current_cycle": 2,
+        "next_debit_notice_profile": "not_yet_due",
+        "terminal_failure_code": "MANDATE_REVOKED"
+      },
+      "mnd_0058": {
+        "afa_registration_gap": false,
+        "afa_side": "below",
+        "cohort": "notice_violation",
+        "failed_attempts_in_current_cycle": 0,
+        "next_debit_notice_profile": "late",
+        "terminal_failure_code": null
+      },
+      "mnd_0059": {
+        "afa_registration_gap": false,
+        "afa_side": "below",
+        "cohort": "healthy",
+        "failed_attempts_in_current_cycle": 0,
+        "next_debit_notice_profile": "on_time",
+        "terminal_failure_code": null
+      },
+      "mnd_0060": {
+        "afa_registration_gap": false,
+        "afa_side": "above",
+        "cohort": "repeat_failure",
+        "failed_attempts_in_current_cycle": 2,
+        "next_debit_notice_profile": "on_time",
+        "terminal_failure_code": null
+      },
+      "mnd_0061": {
+        "afa_registration_gap": false,
+        "afa_side": "above",
+        "cohort": "first_failure",
+        "failed_attempts_in_current_cycle": 1,
+        "next_debit_notice_profile": "on_time",
+        "terminal_failure_code": null
+      },
+      "mnd_0062": {
+        "afa_registration_gap": false,
+        "afa_side": "below",
+        "cohort": "first_failure",
+        "failed_attempts_in_current_cycle": 1,
+        "next_debit_notice_profile": "on_time",
+        "terminal_failure_code": null
+      },
+      "mnd_0063": {
+        "afa_registration_gap": false,
+        "afa_side": "above",
+        "cohort": "healthy",
+        "failed_attempts_in_current_cycle": 0,
+        "next_debit_notice_profile": "late",
+        "terminal_failure_code": null
+      },
+      "mnd_0064": {
+        "afa_registration_gap": false,
+        "afa_side": "below",
+        "cohort": "cap_reached",
+        "failed_attempts_in_current_cycle": 3,
+        "next_debit_notice_profile": "not_yet_due",
+        "terminal_failure_code": null
+      }
+    }
+  },
+  "manifest_version": 1,
+  "measured": {
+    "afa_threshold_paise": 1500000,
+    "amount_paise": {
+      "max": 7266700,
+      "min": 25100
+    },
+    "amount_split_at_afa_threshold": {
+      "above": 26,
+      "at_or_below": 38
+    },
+    "debit_attempts": 194,
+    "failed_attempts": 74,
+    "failure_class_shares": {
+      "AMBIGUOUS": 0.0811,
+      "HARD": 0.0946,
+      "POLICY_BLOCK": 0.0811,
+      "SOFT": 0.6486,
+      "TERMINAL_MANDATE": 0.0946
+    },
+    "failure_code_counts": {
+      "ACCOUNT_CLOSED": 6,
+      "AFA_REQUIRED": 6,
+      "CARD_EXPIRED": 1,
+      "DO_NOT_HONOUR": 6,
+      "GATEWAY_TIMEOUT": 2,
+      "INSUFFICIENT_FUNDS": 30,
+      "ISSUER_UNAVAILABLE": 13,
+      "MANDATE_REVOKED": 7,
+      "TRANSACTION_LIMIT_EXCEEDED": 3
+    },
+    "frequency_counts": {
+      "monthly": 44,
+      "quarterly": 9,
+      "weekly": 11
+    },
+    "issuer_decline_class_shares_excluding_lifecycle": {
+      "AMBIGUOUS": 0.0984,
+      "HARD": 0.1148,
+      "SOFT": 0.7869
+    },
+    "mandates": 64,
+    "mandates_at_or_above_attempt_cap": 7,
+    "mandates_without_afa_registration": 3,
+    "next_debit_notice_present": 48,
+    "status_counts": {
+      "active": 52,
+      "paused": 5,
+      "revoked": 7
+    }
+  },
+  "nondeterministic": {
+    "generated_at": "2026-09-03T21:46:01Z"
+  },
+  "output": {
+    "file": "mandates.jsonl",
+    "rows": 64,
+    "sha256": "2923c2c61045c3d7678bfdb2818d4229501dfe784d71db00cc82ce9b3e1d276f"
+  },
+  "seed": 42
+}

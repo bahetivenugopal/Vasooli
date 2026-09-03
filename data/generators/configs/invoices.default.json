@@ -1,0 +1,74 @@
+{
+  "_comment": [
+    "The receivables ledger Engine 3 chases. Archetypes differ in behaviour, not",
+    "just in numbers: a reliably-slow payer who always pays and a chronic",
+    "delinquent can carry identical ageing and identical amounts, and the correct",
+    "escalation for them is not the same. Reply annotations (promise, date,",
+    "dispute) live in the manifest only — the engine has to read the text."
+  ],
+  "dataset": "invoices",
+  "batch_prefix": "inv",
+  "as_of": "2026-09-01T09:00:00+05:30",
+  "invoice_count": 72,
+  "customer_pool": 30,
+
+  "payment_terms": { "NET15": 0.28, "NET30": 0.52, "NET45": 0.2 },
+
+  "amount_buckets": {
+    "small": { "weight": 0.34, "min_paise": 1500000, "max_paise": 7500000 },
+    "medium": { "weight": 0.38, "min_paise": 7500000, "max_paise": 30000000 },
+    "large": { "weight": 0.2, "min_paise": 30000000, "max_paise": 90000000 },
+    "very_large": { "weight": 0.08, "min_paise": 90000000, "max_paise": 250000000 }
+  },
+
+  "ageing_buckets": {
+    "current": { "weight": 0.2, "min_days_overdue": 0, "max_days_overdue": 0 },
+    "1_30": { "weight": 0.34, "min_days_overdue": 1, "max_days_overdue": 30 },
+    "31_60": { "weight": 0.22, "min_days_overdue": 31, "max_days_overdue": 60 },
+    "61_90": { "weight": 0.14, "min_days_overdue": 61, "max_days_overdue": 90 },
+    "90_plus": { "weight": 0.1, "min_days_overdue": 91, "max_days_overdue": 165 }
+  },
+
+  "archetypes": {
+    "reliable_slow": 0.26,
+    "first_time_late": 0.24,
+    "chronic_delinquent": 0.22,
+    "disputing": 0.14,
+    "silent": 0.14
+  },
+
+  "archetype_reply_mix": {
+    "reliable_slow": { "explicit_promise": 0.72, "vague_promise": 0.28 },
+    "first_time_late": { "vague_promise": 0.46, "explicit_promise": 0.32, "non_response": 0.22 },
+    "chronic_delinquent": { "vague_promise": 0.38, "conditional_promise": 0.36, "explicit_promise": 0.26 },
+    "disputing": { "dispute": 0.82, "vague_promise": 0.18 },
+    "silent": { "non_response": 1.0 }
+  },
+
+  "archetype_promise_kept_rate": {
+    "reliable_slow": 0.9,
+    "first_time_late": 0.6,
+    "chronic_delinquent": 0.1,
+    "disputing": 0.0,
+    "silent": 0.0
+  },
+
+  "reply_probability": {
+    "reliable_slow": 0.9,
+    "first_time_late": 0.75,
+    "chronic_delinquent": 0.8,
+    "disputing": 0.95,
+    "silent": 0.25
+  },
+
+  "language_mix": { "en": 0.62, "hinglish": 0.38 },
+
+  "reminder_ladder": {
+    "max_rungs": 3,
+    "spacing_days": 7,
+    "first_reminder_after_days": 3,
+    "channel": "email"
+  },
+
+  "vague_promise_grace_days": 7
+}
