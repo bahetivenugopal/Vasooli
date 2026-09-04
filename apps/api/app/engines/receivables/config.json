@@ -1,0 +1,87 @@
+{
+  "_comment": [
+    "Engine 3's operating parameters. Every value names the rule that argues for",
+    "it. Unlike Engine 2, none of these is regulatory — the receivables ladder is",
+    "entirely Vasooli product judgment, which is exactly why every number has to",
+    "be citable. The ones mirrored from policy_engine.py are marked `enforced`:",
+    "changing them here changes nothing, because the gate does not read this file,",
+    "and `load_config()` raises rather than let the two disagree silently."
+  ],
+  "version": "1.0.0",
+  "ladder": {
+    "rungs": [
+      {
+        "name": "gentle_reminder",
+        "tone": "friendly",
+        "channel": "email",
+        "call_to_action": "confirm_payment_date"
+      },
+      {
+        "name": "firm_follow_up",
+        "tone": "direct",
+        "channel": "email",
+        "call_to_action": "pay_via_link"
+      },
+      {
+        "name": "formal_notice",
+        "tone": "formal",
+        "channel": "email",
+        "call_to_action": "pay_via_link"
+      }
+    ],
+    "min_interval_hours": 72,
+    "rule": "policy-bounds:RL1 / RL2",
+    "enforced": true,
+    "note": "Rung count and interval mirror ENGINE_LIMITS[RECEIVABLES]. The names and tones are this file's to set; the bounds are not."
+  },
+  "contact_caps": {
+    "per_invoice_per_window": 3,
+    "per_customer_per_window": 4,
+    "window_days": 7,
+    "rule": "policy-bounds:QH2 / RL3",
+    "enforced": true,
+    "note": "QH2 bounds the conversation, RL3 bounds the recipient. The cross-invoice cap is the one that is easy to miss and the one that actually stops a customer with eight overdue invoices getting eight messages."
+  },
+  "promises": {
+    "grace_hours": 48,
+    "undateable_horizon_days": 7,
+    "rule": "policy-bounds:PP1 / PP3",
+    "enforced": true,
+    "note": "Grace covers settlement lag — a Friday NEFT can credit on Monday, and escalating that customer is the most expensive false positive this engine can produce."
+  },
+  "understanding": {
+    "min_confidence": 0.6,
+    "rule": "policy-bounds:HE1",
+    "enforced": false,
+    "note": "Below this the reading is treated as unreliable and the task abstains rather than degrading to a cheaper answer. Same floor the shared classifier uses; a promise register is not a place to act on a guess."
+  },
+  "prioritization": {
+    "weights": {
+      "outstanding_value": 0.35,
+      "days_overdue": 0.3,
+      "customer_unreliability": 0.25,
+      "contact_headroom": 0.1
+    },
+    "days_overdue_cap": 90,
+    "unknown_reliability": 0.5,
+    "rule": "policy-bounds:PR1",
+    "enforced": false,
+    "note": "A transparent weighted sum, shown per invoice. Value leads because recoverable rupees are the point; ageing is second because collectability falls with age; unreliability third because a customer who breaks promises is where attention pays. `unknown_reliability` is the neutral prior for a customer with no resolved promise — deliberately mid-scale, so no history neither helps nor hurts."
+  },
+  "ageing_buckets": {
+    "current": { "min_days": -9999, "max_days": 0 },
+    "1_30": { "min_days": 1, "max_days": 30 },
+    "31_60": { "min_days": 31, "max_days": 60 },
+    "61_90": { "min_days": 61, "max_days": 90 },
+    "90_plus": { "min_days": 91, "max_days": 99999 },
+    "rule": "policy-bounds:PR1",
+    "enforced": false,
+    "note": "Derived by the engine from `due_at` and `paid_at`. The bucket names match the generator's, but the boundaries are recomputed here — the engine never reads the manifest that assigned them."
+  },
+  "payment_link": {
+    "expiry_days": 14,
+    "rule": "razorpay-api:payment_link.create",
+    "enforced": false,
+    "note": "Long enough to survive a B2B payment run, short enough that a stale link does not sit collectable forever. A failed link degrades the message rather than aborting the chase."
+  }
+}

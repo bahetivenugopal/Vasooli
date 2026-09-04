@@ -23,6 +23,7 @@ import hashlib
 import json
 import logging
 from dataclasses import dataclass
+from datetime import datetime
 from enum import StrEnum
 from functools import lru_cache
 from pathlib import Path
@@ -391,12 +392,21 @@ class RazorpayClient:
         entity_type: EntityType,
         entity_id: str,
         amount_at_risk_paise: int = 0,
+        timestamp: datetime | None = None,
     ) -> Any:
         """Write a call and its result to the audit trail.
 
         The mode goes into the entry's metadata on every call, which is what
         keeps simulated mode explicit and visible rather than silent. A reader
         can always tell whether a number came from a real test-mode call.
+
+        `timestamp` is the **run clock**, and passing it matters more than it
+        looks. Every batch in this project runs against a fixed historical
+        `as_of`, so an entry stamped with `utcnow()` lands months after the
+        decision that authorised it — the entity's timeline stops being ordered,
+        and the trail claims a Razorpay call happened long after the action it
+        was part of. Left optional so an ad-hoc call outside a batch still
+        records honestly as having happened now.
         """
         if self._audit is None:
             raise RazorpayConfigurationError(
@@ -424,6 +434,7 @@ class RazorpayClient:
             ),
             provenance=Provenance.deterministic(),
             amount_at_risk_paise=amount_at_risk_paise,
+            timestamp=timestamp,
             metadata={
                 "razorpay_mode": result.mode.value,
                 "operation": result.operation,

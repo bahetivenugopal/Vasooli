@@ -16,6 +16,7 @@ from app.models.enums import (
     DeclineClass,
     Engine,
     EntityType,
+    EscalationTrigger,
     Outcome,
     ProvenanceSource,
     RuleSource,
@@ -27,6 +28,14 @@ from app.models.mandate import (
     MandateRecoveryStateRead,
 )
 from app.models.provenance import Provenance
+from app.models.receivables import (
+    InvoiceChaseState,
+    InvoiceChaseStateRead,
+    InvoiceCommunication,
+    InvoiceCommunicationRead,
+    PromiseToPay,
+    PromiseToPayRead,
+)
 from app.models.root_cause import (
     CorridorDetection,
     CorridorDetectionRead,
@@ -51,11 +60,18 @@ __all__ = [
     "DeclineClass",
     "Engine",
     "EntityType",
+    "EscalationTrigger",
+    "InvoiceChaseState",
+    "InvoiceChaseStateRead",
+    "InvoiceCommunication",
+    "InvoiceCommunicationRead",
     "MandateCommunication",
     "MandateCommunicationRead",
     "MandateRecoveryState",
     "MandateRecoveryStateRead",
     "Outcome",
+    "PromiseToPay",
+    "PromiseToPayRead",
     "Provenance",
     "ProvenanceSource",
     "RecoverableEntity",

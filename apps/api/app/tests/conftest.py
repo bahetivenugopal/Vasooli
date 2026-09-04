@@ -24,8 +24,11 @@ from app.models import (  # noqa: F401 - registers the tables
     BatchRun,
     CorridorDetection,
     CorridorReroute,
+    InvoiceChaseState,
+    InvoiceCommunication,
     MandateCommunication,
     MandateRecoveryState,
+    PromiseToPay,
 )
 from app.models.entity import RecoverableEntity
 from app.models.enums import EntityType

@@ -115,6 +115,10 @@ customer, because a customer with three overdue invoices has three legitimate
 conversations; a rolling window rather than a calendar week, so a Sunday–Monday
 boundary cannot be used to send six messages in two days.
 
+> The per-entity reading has a limit, and RL3 is where it stops: a customer with
+> eight overdue invoices does not get twenty-four messages a week. QH2 bounds the
+> conversation; RL3 bounds the recipient.
+
 ### QH3 — Escalation ladder is capped
 
 The escalation ladder has a **final rung**. Once reached, the entity is handed
@@ -222,6 +226,148 @@ rejection is audited with the constraint it broke.
 **Rationale.** The safe direction of error is a boring accurate message, not a
 persuasive unvalidated one. Discarding also keeps the failure visible: a
 rejected draft appears in the trail as a rejection, not as a silent edit.
+
+---
+
+## RL — The receivables chase ladder
+
+Engine 3 is the only engine whose *entire* output is outreach, so it is where
+"bounded" has to mean something more specific than an attempt cap. These bounds
+are what separate a chase from harassment, and every one of them is a product
+decision.
+
+> QH1 and QH2 still apply, unchanged. What follows sits **on top** of them.
+
+### RL1 — Three rungs, then a human: **gentle reminder → firm follow-up → formal notice**
+
+The ladder has exactly three rungs. Past the third, the invoice goes to a human
+(QH3/HE2). Each rung has its own tone; none of them may threaten (TN1).
+
+**Rationale.** Three touches is the standard shape of a receivables ladder, and
+it is deliberately the same number as the QH2 contact cap so the two bounds
+cannot disagree about how often a customer hears from us. A fourth rung would be
+structurally unsendable anyway, which is a bad way to discover a policy.
+
+### RL2 — Minimum interval between rungs: **72 hours**
+
+No rung fires less than 72 hours after the previous contact on that invoice.
+
+**Rationale.** Three messages at 72-hour spacing fit inside the QH2 rolling
+7-day window with room to spare (day 0, day 3, day 6), so the ladder can run to
+completion without ever colliding with its own contact cap. It is longer than the
+generic CD1 floor of 6 hours because a B2B accounts-payable cycle does not move
+in hours — a reminder sent the morning after the last one has not given anyone
+time to act, and reads as pressure rather than diligence.
+
+### RL3 — Cross-invoice customer cap: **4 messages per customer per rolling 7 days**
+
+Counted across *every* invoice that customer owes, every channel, every engine.
+Once reached, no further outreach to that customer is authorised this week,
+regardless of how many of their invoices are overdue.
+
+**Rationale.** QH2 is per entity, and its rationale is right: a customer with
+three overdue invoices has three legitimate conversations. But the recipient is a
+person, not an entity, and a customer with eight overdue invoices receiving eight
+messages in a week is being harassed however defensible each individual message
+is. Four is set deliberately *above* the per-invoice cap of three — one whole
+invoice's ladder plus one — so a second invoice can still be raised in the same
+week, and *below* the point where a mailbox stops reading them. This is the bound
+that is easy to miss and is genuinely the difference between a collections system
+and a nuisance.
+
+### RL4 — Dispute freeze: a disputed invoice is never chased again automatically
+
+The moment a reply is classified as a dispute, **all** automated chasing on that
+invoice stops and it routes to human review. Not a pause, not a longer interval —
+a stop. It is evaluated with the hard stops, before any ladder consideration.
+
+**Rationale.** Continuing to chase an invoice the customer says is wrong is bad
+practice, a compliance risk, and the fastest way to turn a billing error into a
+relationship failure. The system has no way to adjudicate a disputed amount, so
+the only defensible action is to hand it to someone who can. Note the asymmetry
+with HS1: a dispute freeze is not terminality — the invoice is still owed and a
+human may resume it — but nothing automated may.
+
+### RL5 — The ladder ascends on evidence, never on a timer
+
+Escalation past the current rung requires **evidence**: a broken promise (PP1),
+or ladder exhaustion (all rungs spent). Elapsed time alone never escalates.
+
+**Rationale.** This is the engine's central differentiator, so it is worth
+stating as a rule rather than as behaviour: *the system does not chase people who
+are cooperating; it chases the ones who committed and did not follow through.* A
+customer who replied with a credible promise and is inside its window has done
+exactly what was asked of them, and escalating them for the crime of a week
+passing is how automated collections earns its reputation.
+
+---
+
+## PP — Promise-to-pay tracking
+
+### PP1 — Broken-promise grace: **48 hours** past the committed date
+
+A promise is **kept** when payment arrives on or before the committed date,
+**broken** only once 48 hours have passed beyond it with no payment, and
+**superseded** when a later reply revises it. The grace window is checked
+explicitly; a promise is never declared broken as a side effect of something else.
+
+**Rationale.** A payment initiated on the promised day does not necessarily
+*land* on it — NEFT and RTGS settle in batches, and a Friday transfer can credit
+on Monday. Declaring a promise broken because of settlement lag would escalate a
+customer who did precisely what they said, which is the single most expensive
+false positive this engine can produce. Two days covers a weekend without letting
+a genuinely broken promise sit.
+
+### PP2 — A conditional promise is not a firm promise
+
+"Once our client pays us" is a commitment to intent, not to a date. Conditional
+promises are recorded with `conditional: true`, are **never** scored kept or
+broken against a date they did not give, and cannot trigger an RL5 escalation.
+Their exit is ladder exhaustion, like any invoice with no promise at all.
+
+**Rationale.** Conflating the two is the most likely way this feature is quietly
+wrong in both directions: treat a conditional promise as firm and the system
+suppresses a legitimate chase on a date nobody committed to, then escalates for
+breaking it. Tracking it distinctly costs one boolean and is the difference
+between reading a reply and pattern-matching it.
+
+### PP3 — Undateable promise review horizon: **7 days**
+
+A promise with no extractable date — conditional, or simply vague — deprioritises
+its invoice for 7 days from the reply, after which the ladder resumes from where
+it left off.
+
+**Rationale.** A commitment with no date still deserves *some* room, or the
+system punishes honesty about uncertainty. Seven days matches the QH2 rolling
+window, so an invoice cannot be parked longer than the period over which its
+contact budget refreshes. It is a pause, never a stop.
+
+---
+
+## PR — Prioritisation
+
+### PR1 — The worklist is deterministic, and its weights are declared
+
+Invoice prioritisation is a transparent weighted score over outstanding value,
+days overdue, customer payment history and promise state. The weights live in
+engine config, are shown alongside every ranked invoice, and are **never**
+model-derived. Ranking decides the *order* of work; it never decides permission.
+
+**Rationale.** A recovery order a customer could be shown, and argued with, has
+to be reproducible. It is also the wrong job for a model: there is no judgment
+here that a weighted sum does not capture, and a reasoned ranking would be
+unexplainable and unstable across runs for no gain.
+
+### PR2 — An invoice with a live, unbroken promise is deprioritised, not chased
+
+While a promise is `active` and inside its window (PP1) or its horizon (PP3), the
+invoice is dropped down the worklist and no reminder is authorised for it.
+
+**Rationale.** Chasing someone who has already committed is the behaviour that
+makes automated collections feel like harassment, and suppressing it is a claim
+worth making out loud. It is also the correct commercial call: the message would
+spend one of the customer's four weekly contacts (RL3) to tell them something
+they have already told us.
 
 ---
 

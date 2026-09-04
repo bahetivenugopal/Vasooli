@@ -33,6 +33,7 @@ from app.models.enums import (
     CorridorDetermination,
     DeclineClass,
     Engine,
+    EscalationTrigger,
     Outcome,
     RuleSource,
 )
@@ -345,6 +346,90 @@ RULE_REGISTRY: dict[str, PolicyRule] = {
             RuleSource.CORRIDOR_DETECTION,
             "corridor-detection -> ES1",
         ),
+        # --- Receivables ladder bounds (Engine 3) ---------------------------
+        _rule(
+            "policy-bounds:RL1",
+            "quiet_hours",
+            "The chase ladder has exactly three rungs — gentle reminder, firm "
+            "follow-up, formal notice. Past the third the invoice goes to a human.",
+            RuleSource.POLICY_BOUNDS,
+            "policy-bounds -> RL1",
+        ),
+        _rule(
+            "policy-bounds:RL2",
+            "cooldown",
+            "No rung fires less than 72 hours after the previous contact on that "
+            "invoice. Three rungs at that spacing fit inside the QH2 window.",
+            RuleSource.POLICY_BOUNDS,
+            "policy-bounds -> RL2",
+        ),
+        _rule(
+            "policy-bounds:RL3",
+            "quiet_hours",
+            "At most 4 messages per customer per rolling 7 days, counted across "
+            "every invoice they owe. QH2 bounds the conversation; this bounds the "
+            "recipient.",
+            RuleSource.POLICY_BOUNDS,
+            "policy-bounds -> RL3",
+        ),
+        _rule(
+            "policy-bounds:RL4",
+            "hard_stop",
+            "A disputed invoice is never chased again automatically. Chasing stops "
+            "immediately and the invoice routes to human review.",
+            RuleSource.POLICY_BOUNDS,
+            "policy-bounds -> RL4",
+        ),
+        _rule(
+            "policy-bounds:RL5",
+            "human_escalation",
+            "The ladder ascends on evidence — a broken promise or ladder "
+            "exhaustion — never on elapsed time alone.",
+            RuleSource.POLICY_BOUNDS,
+            "policy-bounds -> RL5",
+        ),
+        # --- Promise-to-pay bounds (Engine 3) -------------------------------
+        _rule(
+            "policy-bounds:PP1",
+            "cooldown",
+            "A promise is broken only once 48 hours have passed beyond the "
+            "committed date with no payment. Settlement lag is not a broken promise.",
+            RuleSource.POLICY_BOUNDS,
+            "policy-bounds -> PP1",
+        ),
+        _rule(
+            "policy-bounds:PP2",
+            "human_escalation",
+            "A conditional promise is never scored kept or broken against a date it "
+            "did not give, and cannot trigger an RL5 escalation.",
+            RuleSource.POLICY_BOUNDS,
+            "policy-bounds -> PP2",
+        ),
+        _rule(
+            "policy-bounds:PP3",
+            "cooldown",
+            "A promise with no extractable date deprioritises its invoice for 7 "
+            "days from the reply, then the ladder resumes. A pause, never a stop.",
+            RuleSource.POLICY_BOUNDS,
+            "policy-bounds -> PP3",
+        ),
+        # --- Prioritisation (Engine 3) ---------------------------------------
+        _rule(
+            "policy-bounds:PR1",
+            "authority",
+            "The worklist is a deterministic weighted score with declared weights. "
+            "Ranking decides the order of work, never permission.",
+            RuleSource.POLICY_BOUNDS,
+            "policy-bounds -> PR1",
+        ),
+        _rule(
+            "policy-bounds:PR2",
+            "quiet_hours",
+            "An invoice with a live, unbroken promise is deprioritised and no "
+            "reminder is authorised for it.",
+            RuleSource.POLICY_BOUNDS,
+            "policy-bounds -> PR2",
+        ),
         # --- The decision-authority boundary -----------------------------------
         _rule(
             "policy_engine:llm_authority.denied",
@@ -465,6 +550,26 @@ OUTREACH_CLOSE_HOUR = 21
 MAX_MESSAGES_PER_WINDOW = 3
 CONTACT_WINDOW = timedelta(days=7)
 
+#: policy-bounds:RL3 — the *recipient* cap, counted across every invoice a
+#: customer owes. Deliberately one above the per-entity QH2 cap: one whole
+#: ladder plus room to raise a second invoice, and no more.
+MAX_MESSAGES_PER_CUSTOMER = 4
+
+#: policy-bounds:RL1 — the chase ladder's rungs, in order. The list is the rule:
+#: its length is the final rung QH3 refers to, so a fourth rung cannot be added
+#: by editing engine code.
+LADDER_RUNGS: tuple[str, ...] = ("gentle_reminder", "firm_follow_up", "formal_notice")
+
+#: policy-bounds:RL2 — minimum spacing between two rungs on the same invoice.
+LADDER_RUNG_INTERVAL = timedelta(hours=72)
+
+#: policy-bounds:PP1 — grace beyond a committed date before a promise is broken.
+PROMISE_GRACE = timedelta(hours=48)
+
+#: policy-bounds:PP3 — how long an undateable or conditional promise parks its
+#: invoice before the ladder resumes.
+UNDATEABLE_PROMISE_HORIZON = timedelta(days=7)
+
 #: rbi-mandate-rules:A2 — regulatory, not ours. A pre-debit notification reaches
 #: the customer 24-48h before every scheduled debit, retries included. The upper
 #: bound is restated as `PartB.notice_staleness`, which is where the decision to
@@ -498,12 +603,18 @@ ENGINE_LIMITS: dict[Engine, EngineLimits] = {
         cooldown_rule="rbi-mandate-rules:PartB.min_spacing",
     ),
     Engine.RECEIVABLES: EngineLimits(
-        # The ladder's final rung, aligned with the QH2 contact cap so the two
-        # bounds cannot disagree about how many times a customer hears from us.
-        max_attempts=MAX_MESSAGES_PER_WINDOW,
-        max_attempts_rule="policy-bounds:QH3",
-        min_cooldown=BASE_COOLDOWN,
-        cooldown_rule="policy-bounds:CD1",
+        # The ladder's final rung. `RL1` sets the rung count and is deliberately
+        # the same number as the QH2 contact cap, so the two bounds cannot
+        # disagree about how many times a customer hears from us about one
+        # invoice. The cap is the length of `LADDER_RUNGS`, not a literal —
+        # adding a rung to that tuple is the only way to change it.
+        max_attempts=len(LADDER_RUNGS),
+        max_attempts_rule="policy-bounds:RL1",
+        # 72h between rungs, not the generic 6h floor: a B2B accounts-payable
+        # cycle does not move in hours, and CD2's doubling clamps at 72h anyway,
+        # so every rung is spaced exactly RL2's interval.
+        min_cooldown=LADDER_RUNG_INTERVAL,
+        cooldown_rule="policy-bounds:RL2",
     ),
     Engine.CORE: EngineLimits(
         max_attempts=HARD_ATTEMPT_CEILING,
@@ -592,6 +703,33 @@ class PolicyRequest(BaseModel):
     #: only above the `afa_fresh_auth` threshold, where `rbi-mandate-rules:A3`
     #: requires it. Below the threshold a registered mandate needs no fresh OTP.
     fresh_afa_completed: bool = False
+
+    # --- Engine 3: the receivables ladder gates ---------------------------
+    #
+    # Same shape and same reasoning as the two blocks above. Engine 3 is entirely
+    # outreach, so every one of these bounds a *message*; leaving any of them to
+    # the engine to remember would make it an intention rather than a gate.
+
+    #: A reply on this invoice was classified as a dispute
+    #: (`policy-bounds:RL4`). Evaluated with the hard stops: automated chasing
+    #: stops immediately and the invoice routes to a human.
+    dispute_frozen: bool = False
+
+    #: Messages already sent to this *customer* in the rolling window, across
+    #: every invoice they owe (`policy-bounds:RL3`). Distinct from
+    #: `messages_sent_in_window`, which is per invoice under QH2.
+    customer_messages_in_window: int = Field(default=0, ge=0)
+
+    #: True while a promise on this invoice is `active` and inside its window
+    #: (PP1) or its horizon (PP3). Suppresses outreach under
+    #: `policy-bounds:PR2` — chasing someone who already committed is the
+    #: behaviour that makes automated collections feel like harassment.
+    active_promise: bool = False
+
+    #: The evidence for an escalation (`policy-bounds:RL5`). `None` on a
+    #: receivables `escalate` is the refusal case, not a missing field: the
+    #: ladder ascends on evidence and never on a timer.
+    escalation_trigger: EscalationTrigger | None = None
 
 
 class PolicyDecision(BaseModel):
@@ -810,6 +948,29 @@ class PolicyEngine:
                 terminal=True,
             )
 
+        # 1b. Dispute freeze (policy-bounds:RL4). Evaluated with the hard stops
+        #     rather than among the ladder rules: once a customer says an invoice
+        #     is wrong, *nothing* automated may touch it, and a rule that only
+        #     applied to reminders would leave escalation and payment links
+        #     running against an invoice we cannot adjudicate. Unlike HS1 this is
+        #     not terminality — a human may resume it — so the invoice is
+        #     escalated rather than halted.
+        if request.dispute_frozen:
+            return _deny(
+                rule_id="policy-bounds:RL4",
+                reason_code="DISPUTE_FREEZE",
+                rationale=(
+                    f"Invoice {entity.entity_id} is disputed. Automated chasing "
+                    "stops immediately and it goes to a human: the system has no "
+                    "way to adjudicate a disputed amount, and continuing to chase "
+                    "one is both bad practice and a compliance risk."
+                ),
+                action=Action.ESCALATE,
+                outcome=Outcome.ESCALATED,
+                attempts_remaining=0,
+                requires_human=True,
+            )
+
         spec = classify(request.decline_code) if request.decline_code else None
 
         if spec is not None and spec.retryability is Retryability.NEVER:
@@ -916,6 +1077,53 @@ class PolicyEngine:
                     requires_human=True,
                 )
 
+        # 2bb. Escalation evidence (Engine 3, policy-bounds:RL5).
+        #
+        # Above the caps for the same reason the reroute preconditions are: an
+        # escalation with no evidence behind it must be refused for *that*
+        # reason, not incidentally by a budget check. This is the rule behind the
+        # engine's central claim — the system does not chase people who are
+        # cooperating, it chases the ones who committed and did not follow
+        # through — so "which rule let this escalate?" has to have an answer.
+        if (
+            request.engine is Engine.RECEIVABLES
+            and request.proposed_action is Action.ESCALATE
+            and request.escalation_trigger is None
+        ):
+            return _deny(
+                rule_id="policy-bounds:RL5",
+                reason_code="NO_ESCALATION_EVIDENCE",
+                rationale=(
+                    f"Nothing has escalated invoice {entity.entity_id}: no promise "
+                    "was broken and the ladder is not exhausted. Elapsed time is "
+                    "not evidence, so the ladder stays where it is."
+                ),
+                action=Action.BLOCK_ATTEMPT,
+                outcome=Outcome.BLOCKED,
+            )
+
+        # 2bc. A live promise suppresses the chase (Engine 3, policy-bounds:PR2).
+        #
+        # Above the caps and the cooldown deliberately. All three would refuse
+        # this reminder, but only one of them says the *true* thing: an invoice
+        # whose customer has already committed is not "out of budget" or "too
+        # soon", it is an invoice with nothing to say. Found on the first live
+        # run, where six deprioritised invoices were being refused by the RL2
+        # rung interval and the trail could not show that the promise was the
+        # reason.
+        if request.is_outreach and request.active_promise:
+            return _deny(
+                rule_id="policy-bounds:PR2",
+                reason_code="ACTIVE_PROMISE",
+                rationale=(
+                    f"{entity.entity_id} carries a live, unbroken promise to pay. "
+                    "Chasing a customer who has already committed is the behaviour "
+                    "that makes automated collections feel like harassment, so the "
+                    "invoice is deprioritised until the promise is kept or broken."
+                ),
+                outcome=Outcome.SKIPPED,
+            )
+
         # 2c. Mandate debit preconditions (Engine 2).
         #
         # Ordered exactly as `rbi-mandate-rules` -> Preconditions states them, and
@@ -967,6 +1175,25 @@ class PolicyEngine:
 
         # 5. Communication limits — outreach only.
         if request.is_outreach:
+            # 5a. The recipient cap (policy-bounds:RL3), checked before the
+            #     per-entity one: a customer at their weekly limit is at it
+            #     whatever this particular invoice's ladder says.
+            if request.customer_messages_in_window >= MAX_MESSAGES_PER_CUSTOMER:
+                return _deny(
+                    rule_id="policy-bounds:RL3",
+                    reason_code="CUSTOMER_CONTACT_CAP_REACHED",
+                    rationale=(
+                        f"{request.customer_messages_in_window} messages already sent "
+                        f"to this customer across all their invoices in the rolling "
+                        f"{CONTACT_WINDOW.days}-day window (cap "
+                        f"{MAX_MESSAGES_PER_CUSTOMER}). QH2 bounds the conversation; "
+                        "this bounds the recipient — eight overdue invoices are not "
+                        "eight licences to write."
+                    ),
+                    attempts_remaining=attempts_remaining,
+                    requires_human=True,
+                )
+
             if request.messages_sent_in_window >= MAX_MESSAGES_PER_WINDOW:
                 return _deny(
                     rule_id="policy-bounds:QH2",
@@ -1000,11 +1227,19 @@ class PolicyEngine:
         # A permitted reroute cites the corridor rule that let it through rather
         # than the generic one, so the trail names the specific bound the action
         # satisfied — RR2 is the rule doing the work in both directions.
-        permit_rule = (
-            "corridor-detection:RR2"
-            if request.proposed_action is Action.REROUTE_TRAFFIC
-            else "policy_engine:permitted"
-        )
+        # A permitted action cites the specific rule that let it through where
+        # one exists, rather than the generic permission. RR2 governs a reroute
+        # in both directions; RL5 governs a receivables escalation in both
+        # directions. "Which rule let this happen?" should have the same quality
+        # of answer as "which rule stopped it?".
+        permit_rule = "policy_engine:permitted"
+        if request.proposed_action is Action.REROUTE_TRAFFIC:
+            permit_rule = "corridor-detection:RR2"
+        elif (
+            request.engine is Engine.RECEIVABLES
+            and request.proposed_action is Action.ESCALATE
+        ):
+            permit_rule = "policy-bounds:RL5"
         return _permit(
             action=request.proposed_action,
             rule_id=permit_rule,
@@ -1271,11 +1506,19 @@ class PolicyEngine:
     def _envelope(self, request: PolicyRequest, spec: DeclineSpec | None) -> frozenset[Action]:
         """Which actions a recommendation may choose between.
 
-        Always includes the proposed action plus the two exits that are never
-        forbidden — escalating to a human, and stopping. A model is always
-        allowed to choose to do *less*.
+        Always includes the proposed action plus the three exits that are never
+        forbidden — escalating to a human, stopping the schedule, and simply not
+        acting. A model is always allowed to choose to do *less*, and Engine 3's
+        reply understanding needs that explicitly: "this reply says pause, do not
+        send the reminder" is the correct answer to a credible promise, and it
+        should be admissible rather than refused as out-of-envelope.
         """
-        envelope = {request.proposed_action, Action.ESCALATE, Action.HALT_SCHEDULE}
+        envelope = {
+            request.proposed_action,
+            Action.ESCALATE,
+            Action.HALT_SCHEDULE,
+            Action.BLOCK_ATTEMPT,
+        }
         if spec is not None:
             if spec.retryability is Retryability.YES:
                 envelope.add(Action.SCHEDULE_RETRY)

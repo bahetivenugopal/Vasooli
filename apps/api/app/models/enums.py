@@ -112,6 +112,27 @@ class CorridorDetermination(StrEnum):
     INSUFFICIENT_EVIDENCE = "insufficient_evidence"
 
 
+class EscalationTrigger(StrEnum):
+    """Why an invoice left the ladder. Engine 3's `policy-bounds:RL5` evidence.
+
+    The rule is that escalation ascends on evidence and never on a timer, which
+    is only checkable if "what was the evidence?" is a value rather than a
+    narrative. `None` on an escalation request is therefore not a missing field —
+    it is the refusal case.
+    """
+
+    #: A commitment passed its date plus the PP1 grace with no payment.
+    BROKEN_PROMISE = "broken_promise"
+    #: Every rung of the RL1 ladder has been spent.
+    LADDER_EXHAUSTED = "ladder_exhausted"
+    #: A reply was classified as a dispute (RL4). Chasing stops, a human takes it.
+    DISPUTE = "dispute"
+    #: A reasoning task declined to answer (HE1).
+    ABSTENTION = "abstention"
+    #: Above the `high_value_review` threshold (HE3).
+    HIGH_VALUE = "high_value"
+
+
 class BatchStatus(StrEnum):
     """Lifecycle of one reproducible batch run."""
 

@@ -25,14 +25,18 @@ from app.db.session import engine
 # `create_all()` runs. A table missing because its module was never imported
 # surfaces as a baffling error much later.
 from app.engines.mandate_recovery import register_mandate_tasks
+from app.engines.receivables import register_receivables_tasks
 from app.engines.root_cause import register_root_cause_tasks
 from app.models import (  # noqa: F401
     AuditEntry,
     BatchRun,
     CorridorDetection,
     CorridorReroute,
+    InvoiceChaseState,
+    InvoiceCommunication,
     MandateCommunication,
     MandateRecoveryState,
+    PromiseToPay,
 )
 from app.services.llm_agent import REGISTRY
 from app.services.reasoning_tasks import register_core_tasks
@@ -53,6 +57,7 @@ async def lifespan(app: FastAPI):
     register_core_tasks()
     register_root_cause_tasks()
     register_mandate_tasks()
+    register_receivables_tasks()
     REGISTRY.verify_all_have_fallbacks()
     yield
 

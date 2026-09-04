@@ -545,3 +545,201 @@ No invoice or receivables logic, no UI, no voice channel, no live Razorpay
 traffic (simulated mode throughout, and the mode is on every `api_call` entry),
 no multi-cycle simulation, and no message ever dispatched to anyone. Commits were
 left to the user.
+
+---
+
+## Phase 5 — Engine 3: Receivables Chaser & Promise-to-Pay Tracker
+
+**Status:** complete · **Date:** 2026-09-04
+**Verified by:** 531 pytest passing (115 new), `ruff check` clean from the repo
+root *and* from `apps/api/`, a full live-provider batch run, a full no-provider
+run, a second live run at 03:00 IST, and `/audit-check` passing with 0 violations
+over 127 entries (live) and 97 entries (deterministic).
+
+### What now exists
+
+`apps/api/app/engines/receivables/` — ten modules mapping onto the loop:
+
+- `config.py` + `config.json` — ladder, caps, weights. **Raises at load if it
+  disagrees with the gate**, the same guard Engine 2 uses
+- `dataset.py` — reads the invoices `.jsonl`, **refuses a manifest path**
+- `prioritization.py` — the deterministic weighted worklist. No model, ever
+- `understanding.py` — the `understand_reply` task, its coherence guard, and the
+  **abstaining** fallback
+- `promises.py` — kept / broken / active / superseded, each an explicit check
+- `ladder.py` — the bounded chase ladder and the gate every rung passes through
+- `reminders.py` — per-rung templates, tone-validated
+- `recovery.py` — the four bounded actions, each authorised first
+- `scoring.py` — extraction accuracy vs ground truth. The **only** module that
+  opens a manifest
+- `runner.py` — the loop, and a summary recomputed from the audit trail
+
+Plus: ten new `policy-bounds` rules (RL1–RL5, PP1–PP3, PR1–PR2), four new
+`PolicyRequest` gate fields, a new `EscalationTrigger` enum, a new shared
+`app/services/tone.py`, three new tables (`invoice_chase_states`,
+`promises_to_pay`, `invoice_communications`), ten API routes under
+`/api/v1/receivables/`, `scripts/receivables_demo.py`, ADRs 0010 and 0011, and
+`docs/metrics/engine-3-receivables.md`.
+
+### The measured result, in one line
+
+Extraction **100% precision and recall** on promise, dispute and conditionality
+detection over 43 replies (30/30 dates exact, English and Hinglish alike) — which
+is a statement about a 20-template corpus, not a production claim, and the metrics
+doc leads with that. 30 commitments tracked, 12 kept / 4 broken; 12 invoices
+deprioritised because their customer had a live promise; 8 disputes frozen; 4
+quiet-hours suppressions at 03:00 IST. Full numbers, **including the adversarial
+probe that is the real evidence**, are in `docs/metrics/engine-3-receivables.md` —
+**quote that file, not this line.**
+
+### Deviations from the phase file, and why
+
+| # | Deviation | Why it happened |
+| --- | --- | --- |
+| 1 | **No new skill; ten rules added to `policy-bounds` instead** | Phases 1 and 3 each needed a new skill (`policy-bounds`, `corridor-detection`) because the bounds had no home. These do: `policy-bounds` is explicitly "any policy rule the other two skills don't cover". Sections RL (ladder), PP (promises) and PR (prioritisation) were added there with rationale, and QH2 gained a cross-reference to RL3 so the two cannot read as contradicting each other. |
+| 2 | **Reminders are deterministic templates, not a second reasoning task** | §5.2 wants each rung to have its own tone; §5.3 names reply understanding as "the engine's most genuinely AI-dependent component", singular. A drafting task would have added a live call per chased invoice for text with three tones and one call-to-action per rung. The templates still pass the same TN1/TN2 gate a model's output would, and a parametrised test walks every rung — Engine 2 learned the hard way that a fallback a rejection falls back *to* must satisfy the constraints itself. |
+| 3 | **TN1's pattern list moved into the shared core** (`services/tone.py`) | Engine 3 is TN1's second caller. The choice was importing one engine's module from another or keeping a second copy, and a bound with two definitions has two values the moment either is edited. TN2 stayed per-engine: "a remedy the customer can actually complete" is a claim about that engine's failure modes, and a shared union would permit both engines to say things neither should. |
+| 4 | **`recovery_definition` ships in the API response, not just the docs** | The engine does not collect money — the ledger records payments that already arrived, and what the engine does is decide which of them honoured a commitment it tracked. Same remedy as Engine 2's `addressable_definition`: the caveat travels with the number so it cannot be quoted without it. |
+| 5 | **The at-risk denominator excludes not-yet-due invoices and unpromised settlements** | The first run reported the whole ledger at risk (₹2.67 crore against a true ₹2.28 crore) because every invoice with a reply got booked. At risk is now: overdue and unpaid, **plus** settled against a commitment this run tracked. Money that came back has to have been at risk first, or the rate has a numerator with no denominator. |
+| 6 | **Money is booked on the promise entry, not the extraction entry** | With at-risk on the (model-sourced) extraction entry and recovered on the (rule-sourced) promise entry, the deterministic bucket reported a **recovery rate of 101.96%**. Both now land on the same entry. |
+| 7 | **A promise entry carries the *extraction's* provenance, not `deterministic`** | The status is ruled by PP1/PP2/PP3 arithmetic, but the commitment it is a status about was read by a model, and without that reading there is no promise. This is also why Engine 3 is the first engine whose recovered rupees sit in the **reasoned** bucket of the per-source split — see the trap below. |
+| 8 | **The model's recommendation is consulted only on the reminder path** | Found by a test: a perfectly reasonable `pause_chase` on a credible-sounding reply was narrowing a **broken-promise escalation** down to doing nothing. The recommendation answers "should this chase continue given this reply?" — a broken promise is a fact discovered afterwards, by comparing a commitment against a payment that never arrived, and the model never saw it. |
+| 9 | **`suppresses_chase` is a stored field, not derived from the status** | A conditional or undateable promise stays `active` forever — it has no date it could break — so reading suppression off the status parked those invoices permanently. Caught by a test; PP3's horizon now ends suppression while the status stands. |
+| 10 | **`RazorpayClient.record_call()` gained an optional `timestamp`** | `/audit-check` failed on four invoices with out-of-order timelines: the payment-link call was stamped `utcnow()` while every other entry used the run clock, so the trail claimed a Razorpay call happened months after the decision that authorised it. See the trap below — Engine 2 has the same latent defect and does not currently manifest it. |
+| 11 | **`Action.BLOCK_ATTEMPT` added to the base policy envelope** | "This reply says pause, do not send the reminder" is the correct answer to a credible promise, and it is doing *less*. The envelope already always admits escalate and halt for exactly that reason; block belongs beside them. It cannot widen a bound. |
+| 12 | **A permitted receivables escalation cites `policy-bounds:RL5`, not `policy_engine:permitted`** | Same precedent as Engine 1's reroute citing `corridor-detection:RR2` in both directions. "Which rule let this escalate?" should have the same quality of answer as "which rule stopped it?". The rationale also opens with the evidence in words, because the gate's own text — "no stopping rule fired" — reads on the demo surface as an escalation with no reason. |
+
+### Things a later phase will otherwise get wrong
+
+**The run clock is the latest *observed* event, rounded up to the hour.** Not the
+last record timestamp (Engine 1's rule) and not the latest debit attempted
+(Engine 2's). An invoice ledger's newest timestamp is the most recent reply,
+which lands just before the generator's `as_of` — nearly right, and nearly right
+is where this breaks: several invoices have a `due_at` in the *future*, so a
+clock derived from replies alone can sit before an invoice was due and the ageing
+arithmetic goes negative. The anchor is the max of every contact, reply and
+payment. **All three engines now derive `now` differently and all three are right
+for their own data.** Do not copy one into another.
+
+**Engine 3 is the first engine where the model earns the recovery number.**
+Engines 1 and 2 both recovered *identical* amounts on their live and
+deterministic runs, and this log says to say so whenever the two are quoted
+together. That is not true here: no reading means no promise, so the no-provider
+run recovers **₹0** while the live run recovers ₹92.9 lakh. Say *that* instead —
+and say it as a dependency, not only as a win.
+
+**A permitted escalation is not a policy denial.** Counting denials from the
+outcome alone reported every authorised handoff to a human as the gate saying no.
+The chase-decision entry now carries `permitted` in its metadata and the summary
+reads that. Anything counting refusals across engines should do the same.
+
+**Two entries carry `action: send_reminder` per chased invoice** — the decision to
+send one, and the message itself. The summary distinguishes them on
+`metadata.kind == "reminder"`. Counting the action alone doubles every reminder
+figure, which is exactly what the first run did.
+
+**`record_call()` now takes the run clock and Engine 2 does not pass it.** Engine
+2's `api_call` entries are stamped with wall-clock time, months after the
+decisions around them. It does not currently produce an out-of-order timeline
+only because the Razorpay call happens to be the last entry per mandate. It is a
+real latent defect, one keyword argument from fixed, and left alone here because
+changing Engine 2's trail was not this phase's scope.
+
+**`/audit-check`'s "the cited rule must exist" is stricter than the schema.**
+`decline-taxonomy:SOFT.INSUFFICIENT_FUNDS` is the documented citation format from
+`audit-schema` and is generated per code by `decline_taxonomy.py` — legitimate,
+and deliberately *not* in `RULE_REGISTRY`, which holds policy-engine rules only.
+Engine 3 uses no code-level taxonomy citations so it passes the strict check;
+Engine 2 correctly does not. Do not "fix" this by adding taxonomy codes to the
+registry.
+
+**Prioritisation runs before the chase, and the chase runs in rank order.** That
+is load-bearing rather than incidental: the RL3 per-customer cap is consumed
+highest-priority-first, so when a customer's weekly budget runs out it runs out
+on their *least* important invoice.
+
+### Observations worth carrying forward
+
+- **A 100% score is a finding, not a result.** The phase file warned against a
+  "suspicious 99%" and the corpus produced a suspicious 100%. The response was an
+  **adversarial probe** — twelve replies hand-written to bait a false positive,
+  none of them from the templates — and that is where the real evidence turned
+  out to be: zero fabricated promises, three honest abstentions, "next Friday"
+  resolved correctly from a Friday, and a third party's promised date correctly
+  ignored. The probe is better pitch material than the 100%.
+- **Confidence is informative on this task.** Phase 4 concluded the model is
+  "well-calibrated when asked to judge and overconfident when asked to act", and
+  reading a reply is judging: the probe returned 0.20 on an empty reply and 0.50
+  on a date range, both below the 0.6 floor, both correctly abstained. On the
+  corpus itself it returned high confidence on all 43 and the floor never fired —
+  so it works, and it is not exercised by the batch.
+- **Neither contact cap fired in any batch run.** The ledger arrives with most
+  ladders already spent, so only 4 reminders were authorised across 46 overdue
+  invoices and there was never enough volume to reach QH2 or RL3. Both are
+  covered by unit tests against `PolicyEngine` directly. Tested, not
+  demonstrated — reported that way, as Engine 2 reported `classify_unknown_decline`
+  firing zero times.
+- **`superseded` is structurally unreachable on this corpus.** One reply per
+  invoice (Phase 2's stated assumption), so promise-then-revise cannot occur. It
+  is implemented and unit-tested anyway: a status the register can hold but the
+  code cannot produce is a schema that lies about what it tracks.
+- **Cache hits were 73/73** on the second live run. Seeded re-runs are effectively
+  free, with the same exception Phase 3 recorded — a result rejected by the
+  confidence floor is not cached, so the probe's three abstentions re-call every
+  time.
+- **The free-tier limit is 15 requests/minute** and a 43-reply corpus hits it on a
+  cold cache. The backoff worked (1s/2s/4s, then abstain) and the batch completed
+  with one abstention rather than failing — the fallback contract doing exactly
+  its job, on the first live run, unprompted.
+
+### What the shared core made awkward, across all three engines
+
+The phase file asks for this explicitly, and it is the honest
+technical-obstacle material the submission form wants.
+
+1. **`PolicyRequest` has grown to eleven engine-specific gate fields** — two for
+   Engine 1, five for Engine 2, four for Engine 3. Each was added for a good
+   reason (a precondition an engine is trusted to check itself is an intention,
+   and an engine can always forget), and collectively they make the request
+   object a union of three special cases. The alternative — per-engine request
+   subclasses — would have stopped `evaluate()` being one readable function.
+   Given the time budget this was the right trade, but it is the shared core's
+   least elegant surface and the first thing a fourth engine would strain.
+2. **"One entity, one attempt count" does not survive contact with outreach.**
+   `evaluate()` applies the attempt cap and the cooldown to whatever action is
+   proposed, so a message and a charge share one budget unless the engine hands
+   over a different view of the entity. Engine 2 discovered this when *every*
+   dunning message was refused; Engine 3 inherited the workaround
+   (`outreach_entity` / `invoice_entity`). The cleaner design is an action-kind
+   dimension on the bounds themselves — a Phase 1 change nobody could have
+   justified in Phase 1.
+3. **Money on the audit entry has been the recurring bug in all three engines.**
+   Engine 1 inflated its denominator by 86% booking the same rupees three times.
+   Engine 2 made it checkable with a `_booked` guard. Engine 3 hit a subtler
+   version: at-risk and recovered on *different* entries with different
+   provenance, producing a per-source recovery rate above 100%. The lesson is the
+   same each time and the core never enforced it — `record()` accepts any
+   amounts, and the guard is a convention each engine re-implements.
+4. **The run clock has a different correct answer in every engine** (above). The
+   core offers no help: `now` is just a parameter, and each engine had to work
+   out its own anchoring rule and write a docstring explaining why the previous
+   engine's rule is wrong for it.
+5. **Provenance is single-valued on an entry that can have two sources.** A
+   promise entry describes a model-read commitment given a rule-derived status.
+   `Provenance` can say one or the other, so the status arithmetic goes in the
+   rationale and the extraction's confidence goes in metadata. The `audit-schema`
+   contract is right that one field beats two, but a decision genuinely built
+   from a reasoned input *and* a ruled rule has no clean way to say so.
+6. **The tone rules arrived engine-shaped and had to be un-shaped.** TN1–TN3 are
+   engine-agnostic by their own text but landed inside `mandate_recovery`, because
+   Engine 2 was the only caller. Moving them in Phase 5 was cheap; if a fourth
+   caller had arrived under time pressure the likelier outcome is a second copy of
+   the pattern list.
+
+### Not done in this phase (deliberately)
+
+No UI, no voice channel, no live Razorpay traffic (simulated mode throughout, and
+the mode is on every `api_call` entry), no message ever dispatched to anyone, no
+multi-reply conversation modelling, and no second reasoning task for reminder
+drafting. Engine 2's `record_call` timestamp defect was left in place rather than
+fixed out of scope. Commits were left to the user.

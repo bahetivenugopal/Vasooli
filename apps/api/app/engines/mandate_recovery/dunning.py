@@ -22,7 +22,6 @@ leaves the customer with nothing.
 
 from __future__ import annotations
 
-import re
 from typing import Any
 
 from app.engines.mandate_recovery.schemas import (
@@ -40,6 +39,8 @@ from app.services.llm_agent import (
     ReasoningTask,
     TaskRegistry,
 )
+from app.services.tone import FORBIDDEN_PATTERNS as _FORBIDDEN_PATTERNS
+from app.services.tone import scan_forbidden
 
 TASK_DRAFT_DUNNING = "draft_dunning_message"
 
@@ -53,22 +54,11 @@ TEMPLATE_RULE = "policy-bounds:TN3"
 # Tone validation — policy-bounds TN1 / TN2
 # ---------------------------------------------------------------------------
 
-#: TN1. Phrases asserting a consequence Vasooli will not carry out, or a deadline
-#: no rule imposes. Matched case-insensitively on word boundaries. The list is
-#: deliberately concrete rather than clever: a fuzzy "sounds threatening" check
-#: would fail unpredictably, and an unpredictable gate is not a gate.
-FORBIDDEN_PATTERNS: tuple[tuple[str, str], ...] = (
-    (r"\blegal action\b", "threatens legal action"),
-    (r"\blawsuit\b|\bsue\b|\bsued\b", "threatens litigation"),
-    (r"\bcollection(s)? agency\b|\bdebt collector\b", "threatens collections"),
-    (r"\bcredit (score|bureau|report)\b|\bcibil\b", "threatens credit reporting"),
-    (r"\bblacklist(ed)?\b", "threatens blacklisting"),
-    (r"\bpenalt(y|ies)\b|\blate fee(s)?\b|\bfine\b", "asserts a charge that does not exist"),
-    (r"\bsuspend(ed)?\b|\bterminat(e|ed|ion)\b|\bdeactivat(e|ed)\b", "threatens service loss"),
-    (r"\bfinal (notice|warning|reminder)\b", "manufactures a terminal deadline"),
-    (r"\bimmediately\b|\bact now\b|\burgent(ly)?\b", "manufactures urgency"),
-    (r"\bwithin 24 hours\b|\blast chance\b", "manufactures a deadline"),
-)
+#: TN1's pattern list moved into the shared core (`app/services/tone.py`) when
+#: Engine 3 became its second caller: a bound with two definitions has two values
+#: the moment either copy is edited. Re-exported here because it is part of this
+#: module's published surface — the rule has not moved, only its one definition.
+FORBIDDEN_PATTERNS = _FORBIDDEN_PATTERNS
 
 #: TN2. The remedy each failure class actually admits. A draft asking for
 #: something else is describing a different failure than the one that happened.
@@ -109,17 +99,10 @@ def validate_tone(draft: DunningDraft, route: FailureRoute) -> list[ToneViolatio
     Returns every violation rather than the first, so the audit entry can say
     what was wrong with the message instead of only that something was.
     """
-    violations: list[ToneViolation] = []
-    text = f"{draft.subject}\n{draft.body}"
-    for pattern, detail in FORBIDDEN_PATTERNS:
-        match = re.search(pattern, text, flags=re.IGNORECASE)
-        if match:
-            violations.append(
-                ToneViolation(
-                    rule_id="policy-bounds:TN1",
-                    detail=f"{detail} ({match.group(0)!r})",
-                )
-            )
+    violations: list[ToneViolation] = [
+        ToneViolation(rule_id="policy-bounds:TN1", detail=detail)
+        for detail in scan_forbidden(f"{draft.subject}\n{draft.body}")
+    ]
 
     permitted = PERMITTED_CTA.get(route)
     if permitted is not None and draft.call_to_action not in permitted:

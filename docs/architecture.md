@@ -1,10 +1,10 @@
 # Architecture
 
-> **Status: shared core (Phase 1), synthetic data foundry (Phase 2), Engine 1
-> (Phase 3) and Engine 2 (Phase 4) built.** Engine 3 and the dashboard do not
-> exist yet — sections describing them are marked *not built* and say what they
-> will consume. This file describes real code; it should never present an
-> aspiration as though it shipped.
+> **Status: shared core (Phase 1), synthetic data foundry (Phase 2), and all
+> three engines (Phases 3–5) built.** The dashboard does not exist yet — the
+> section describing it is marked *not built* and says what it will consume.
+> This file describes real code; it should never present an aspiration as though
+> it shipped.
 
 ## The shape
 
@@ -13,7 +13,7 @@ Synthetic data generator (transactions, mandates, invoices)     [BUILT]
         │
         ├──► Root-cause engine ────┐                           [BUILT]
         ├──► Mandate engine ───────┤                           [BUILT]
-        └──► Receivables engine ───┤                           [not built]
+        └──► Receivables engine ───┤                           [BUILT]
                                    │
                     ┌──────────────┼──────────────┐
                     │         Shared core         │            [BUILT]
@@ -52,6 +52,7 @@ reimplements decision logic is a bug, not a variation.
 | `razorpay_client.py` | Every Razorpay call, and error normalization | Built |
 | `decline_taxonomy.py` | The soft/hard/ambiguous lookup table as code | Built |
 | `reasoning_tasks.py` | Shared reasoning tasks and their fallbacks | Built |
+| `tone.py` | TN1's forbidden-language scan, shared by every engine that writes to a person | Built |
 | `prompts/` | Versioned prompt files | Built |
 
 ### `policy_engine.py` — permission
@@ -176,8 +177,12 @@ Engine 1 registers `diagnose_corridor`; Engine 2 registers
 `draft_dunning_message`, whose fallback is a per-failure-class template rather
 than an abstention — a message is one of the few places where the rule-based
 answer is nearly as good as the reasoned one, and abstaining would cost a real
-recovery to avoid a small quality loss. Engine 3's promise extraction registers
-in its own phase, with the fallback ADR 0002 specifies.
+recovery to avoid a small quality loss. Engine 3 registers `understand_reply`,
+whose fallback **abstains** — no regex, no keyword heuristic, no partial guess.
+That asymmetry is the whole design: degrade to boring where boring is safe,
+degrade to abstention where being wrong is expensive. A fabricated promise-to-pay
+would suppress a legitimate chase and corrupt the promise register, so refusing
+is the correct answer and the trail records it as a deliberate escalation.
 
 ### Provenance
 
@@ -407,6 +412,127 @@ rather than product judgment. Measured results, including what underperformed,
 are in [`docs/metrics/engine-2-mandate-recovery.md`](metrics/engine-2-mandate-recovery.md).
 
 
+## Engine 3 — Receivables Chaser & Promise-to-Pay Tracker · `apps/api/app/engines/receivables/`
+
+The engine with the narrowest claim and the widest reasoning surface: *the system
+does not chase people who are cooperating; it chases the ones who committed and
+did not follow through.* Everything here exists to make that sentence checkable.
+
+| Module | Responsibility |
+| --- | --- |
+| `config.py` / `config.json` | The ladder, the caps, the weights. Raises if it disagrees with the gate |
+| `dataset.py` | Reads the invoices `.jsonl`. Refuses a manifest path outright |
+| `prioritization.py` | The deterministic weighted worklist. **No model** |
+| `understanding.py` | The reply-reading task, its coherence guard, and its **abstaining** fallback |
+| `promises.py` | Kept / broken / active / superseded, each an explicit check with a citation |
+| `ladder.py` | The bounded chase ladder and the gate every rung passes through |
+| `reminders.py` | Per-rung templates, tone-validated against the same TN rules |
+| `recovery.py` | The four bounded actions, each authorised before it happens |
+| `scoring.py` | Extraction accuracy vs ground truth. The **only** module here that opens a manifest |
+| `runner.py` | The batch loop and the honest summary |
+
+### The data flow
+
+```
+invoices .jsonl (records only — never the manifest)
+   │
+   ├─ understanding.py ─── llm_agent.run("understand_reply", context)
+   │                       → intent · promise? · committed date (absolute) ·
+   │                         conditionality · dispute detail · language ·
+   │                         recommended action (enumerated) · reasoning
+   │                       ↳ the reply's OWN timestamp is in the prompt, so
+   │                         "end of the month" resolves against the reply and
+   │                         not against run time
+   │                       ↳ a self-contradictory reading abstains rather than
+   │                         being reconciled
+   │                       ↳ fallback: ABSTAIN. No regex, no keyword heuristic,
+   │                         no partial guess — a fabricated promise is worse
+   │                         than no promise (llm-provider, ADR 0011)
+   │
+   ├─ promises.py ──────── an explicit check per commitment, every run:
+   │                         paid inside date + 48h grace  -> kept    (PP1)
+   │                         date + grace passed, unpaid   -> broken  (PP1)
+   │                         conditional                   -> never broken (PP2)
+   │                         no date                       -> 7-day horizon (PP3)
+   │                         revised by a later reply      -> superseded (PP2)
+   │                       → per-customer reliability, over resolved promises only
+   │
+   ├─ prioritization.py ── a transparent weighted sum, weights declared in config
+   │                       and shown per invoice (PR1):
+   │                         outstanding value · days overdue ·
+   │                         customer unreliability · contact headroom
+   │                       ↳ a live promise demotes the invoice (PR2) — it stays
+   │                         on the worklist with its reason visible
+   │
+   ├─ ladder.py ────────── escalation evidence first (RL5), then the gate:
+   │                         broken promise / ladder exhausted -> escalate
+   │                         dispute       -> freeze, human review (RL4)
+   │                         abstention    -> human review (HE1)
+   │                         otherwise     -> the next rung, if one is left
+   │                       policy_engine.authorize() on the REMINDER path only —
+   │                       a broken promise is a fact the model never saw
+   │
+   ├─ recovery.py ──────── → classify_decline (the reading) ·
+   │                         record_promise_to_pay · send_reminder · escalate
+   │                       ↳ a Razorpay test-mode payment link per chased invoice;
+   │                         a failure degrades the message, never the chase
+   │
+   └─ runner.py ────────── read replies → track promises → rank → chase, in rank
+                           order, so the RL3 customer cap is spent on the most
+                           important invoice first. Summary recomputed from
+                           `audit_entries`; extraction score scored against the
+                           manifest and persisted on the batch record
+```
+
+### Three things that carry the weight
+
+**The fallback abstains, and that asymmetry is deliberate.** Engine 2's dunning
+degrades to a template because a plain accurate message costs almost nothing.
+Engine 3 refuses, because a fabricated promise would suppress a legitimate chase
+*and then* escalate the customer for breaking a commitment they never made.
+Degrade to boring where boring is safe; degrade to abstention where being wrong
+is expensive.
+
+**Escalation is gated on evidence, never on a timer.** `EscalationTrigger` is a
+typed value and a receivables `escalate` carrying none is refused by the policy
+engine. A live promise outranks an exhausted ladder: a customer who replied with
+a credible commitment is not escalated merely because they had already had three
+reminders. ADR 0010 argues the trade-offs.
+
+**Accuracy is measured, not asserted.** The reply annotations live only in the
+generator's manifest, `resolve_dataset()` raises when handed one, and `scoring.py`
+is the single module permitted to open it. Every rate is over model-handled
+replies with abstentions reported separately. ADR 0011 explains why, and
+[`docs/metrics/engine-3-receivables.md`](metrics/engine-3-receivables.md) reports
+the numbers — including why a perfect score on this corpus is a red flag.
+
+### Bounds this engine adds
+
+All named in `policy-bounds` and registered in `policy_engine.py`. None is
+regulatory — this ladder is entirely product judgment, which is exactly why every
+number has to be citable.
+
+| Rule | Bound |
+| --- | --- |
+| `policy-bounds:RL1` | Three rungs — gentle reminder, firm follow-up, formal notice — then a human |
+| `policy-bounds:RL2` | 72 hours minimum between rungs on one invoice |
+| `policy-bounds:RL3` | **4 messages per customer per rolling 7 days, across every invoice they owe** |
+| `policy-bounds:RL4` | A disputed invoice is never chased again automatically |
+| `policy-bounds:RL5` | The ladder ascends on evidence — a broken promise or exhaustion — never on elapsed time |
+| `policy-bounds:PP1` | A promise is broken only 48h past its committed date |
+| `policy-bounds:PP2` | A conditional promise is never scored against a date it did not give |
+| `policy-bounds:PP3` | A promise with no date deprioritises its invoice for 7 days, then the ladder resumes |
+| `policy-bounds:PR1` | The worklist is deterministic and its weights are declared |
+| `policy-bounds:PR2` | An invoice with a live, unbroken promise is deprioritised, not chased |
+
+RL3 is the one that is easy to miss and the one that actually matters: QH2 bounds
+the *conversation* about one invoice, RL3 bounds what one *recipient* hears in a
+week. A customer with eight overdue invoices does not get eight messages.
+
+ADR 0010 records why escalation is gated on broken promises rather than elapsed
+time, and ADR 0011 how the extraction measurement is built.
+
+
 ## API surface
 
 ```
@@ -442,12 +568,34 @@ GET  /api/v1/mandate-recovery/runs/{batch}/communications
                                                    filters: status, kind
 GET  /api/v1/mandate-recovery/runs/{batch}/actions every action, with its rule
 GET  /api/v1/mandate-recovery/config               windows, each citing a rule
+
+POST /api/v1/receivables/runs                      run the loop over a ledger
+GET  /api/v1/receivables/runs                      every run, with its seed
+GET  /api/v1/receivables/runs/{batch}              one run's record
+GET  /api/v1/receivables/runs/{batch}/extraction   confusion matrix vs ground
+                                                   truth, with the abstention
+                                                   rate reported separately
+GET  /api/v1/receivables/runs/{batch}/worklist     ranked, with every score
+                                                   breakdown. Filters:
+                                                   deprioritised, ageing_bucket,
+                                                   next_step
+GET  /api/v1/receivables/runs/{batch}/promises     the register. Filters: status,
+                                                   conditional, customer_id
+GET  /api/v1/receivables/runs/{batch}/invoices/{invoice_id}
+                                                   the full story — contacts, the
+                                                   reply verbatim, what was read
+                                                   from it, the promise, and the
+                                                   rule behind every decision
+GET  /api/v1/receivables/runs/{batch}/communications
+                                                   filters: status, rung
+GET  /api/v1/receivables/runs/{batch}/actions      every action, with its rule
+GET  /api/v1/receivables/config                    ladder, caps and weights, each
+                                                   citing a rule
 ```
 
-The audit routes stay read-only. `POST /root-cause/runs` and
-`POST /mandate-recovery/runs` write, but only by delegating the whole loop to
-their runner — there is no route that can produce an audit entry without a
-decision behind it.
+The audit routes stay read-only. The three `POST .../runs` routes write, but only
+by delegating the whole loop to their runner — there is no route that can produce
+an audit entry without a decision behind it.
 
 Read-only by design: the trail is written by services and nothing else. Engine
 routers mount onto `api_router` as each phase lands. OpenAPI docs at `/docs`.
@@ -466,16 +614,27 @@ Two invariants hold everywhere:
   to be UTC, and everything read back is tz-aware.
 
 Tables: `audit_entries`, `batch_runs`, `corridor_detections`, `corridor_reroutes`,
-`mandate_recovery_states`, `mandate_communications`. The last four hold the
-engines' artefacts and are **not** metric sources: every reported figure is
+`mandate_recovery_states`, `mandate_communications`, `invoice_chase_states`,
+`promises_to_pay`, `invoice_communications`. Everything after `batch_runs` holds
+an engine's artefacts and is **not** a metric source: every reported figure is
 recomputed from `audit_entries`, so a stale row in any of them can never become a
-number anyone quotes. The two mandate tables are keyed by `(batch_id, …)` rather
-than by entity id, because one dataset feeds many runs and a table that could
-hold only one run's view of a mandate would overwrite the previous run's
-evidence. `RecoverableEntityMixin` carries the
-fields all three engines share (identifier, amount in paise, currency, status,
-attempt count, last-attempt timestamp, terminal flag) for the engine-specific
-tables that arrive in later phases.
+number anyone quotes. The one exception is Engine 3's extraction score, which
+needs the generator's manifest and so is persisted on the batch record's `notes`
+rather than recomputed — nothing serving an API request should reach for a
+manifest.
+
+The per-run tables are keyed by `(batch_id, …)` rather than by entity id, because
+one dataset feeds many runs and a table that could hold only one run's view of an
+entity would overwrite the previous run's evidence. `RecoverableEntityMixin`
+carries the fields all three engines share (identifier, amount in paise, currency,
+status, attempt count, last-attempt timestamp, terminal flag), but the per-run
+snapshot tables deliberately do not use it — its `entity_id` is unique, which is
+right for a live entity table and wrong for a snapshot.
+
+`promises_to_pay` is the one place in the project where a **model-derived fact
+becomes durable state**, which is why it carries `provenance` and
+`model_confidence` as columns rather than only in the trail. An abstention never
+reaches it.
 
 ## Frontend
 
@@ -488,7 +647,9 @@ tables that arrive in later phases.
 The dashboard's job is to make the audit trail legible: the headline recovery
 number *with its batch id and seed*, all three engines in one view, the decision
 trail for any entity, and blocked/halted actions shown as prominently as
-successes — they are the compliance evidence.
+successes — they are the compliance evidence. Engine 3 adds two surfaces worth
+rendering directly: the ranked worklist with each invoice's score breakdown, and
+the promise register with its statuses.
 
 ## Deliberately not doing
 
@@ -499,7 +660,10 @@ successes — they are the compliance evidence.
 - No Postgres migration
 - No checkout drop-off recovery (out of scope)
 - Hinglish voice only as an optional bonus channel on Engine 2's notification
-  step, and only once all three engines are solid and demo-ready
+  step, and only once all three engines are solid and demo-ready. Note that
+  Engine 3 *reads* Hinglish and only ever writes English; `services/tone.py`'s
+  forbidden-language patterns are English-only, so a vernacular outreach channel
+  would need that list extended before it shipped
 
 All of these would be premature complexity with no payoff for judges in a ~30-hour
 build. Reversing any of them requires an ADR in [`adr/`](adr/).
