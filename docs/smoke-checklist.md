@@ -46,7 +46,24 @@ fetch` for both. If the dashboard is served from `127.0.0.1:3000` but
 
 ## 1. Data present
 
-Needs one completed run per engine. To make them:
+Needs one completed run per engine. **Prefer the unified run** — it makes all
+three at once, under one run id, and prints the numbers the dashboard is about to
+show, so a disagreement is visible before the browser is even open:
+
+```bash
+python scripts/unified_demo.py --seed 42
+```
+
+- [ ] The run's own integrity verdict is `PASS` on all four checks, and the
+      command exited `0`.
+- [ ] The console headline and `/` show the **same** at-risk, recovered and rate.
+      They are the same object served two ways, so any difference is a defect,
+      not a rounding artefact.
+- [ ] The mode line at the top matches what you intended — live provider or
+      deterministic. Recording a "live" demo that quietly ran on fallbacks is the
+      exact dishonesty the mode line exists to prevent.
+
+Per-engine runs still work, and give more detail on one engine:
 
 ```bash
 python scripts/root_cause_demo.py  --batch-id smoke-rc
@@ -190,8 +207,14 @@ directory listing.
 ```bash
 cd apps/web && npm run check     # prettier + eslint + vitest + next build
 cd apps/api && .venv/Scripts/python -m pytest && .venv/Scripts/ruff check app
+cd ../.. && python scripts/audit_check.py --latest --integrity
 ```
 
 `npm run check` covers formatting, lint, the money-formatter boundary tests and
-the number-fidelity tests, and the production build. It does **not** cover
-anything in section 1 through 5 above — that is what this document is for.
+the number-fidelity tests, and the production build. `audit_check.py --integrity`
+covers the twelve audit-schema validations, the cross-source metric comparison
+and the two traceability checks, and exits non-zero on any violation.
+
+Neither covers anything in section 1 through 5 above — that is what this document
+is for. Phase 6's lesson stands: the production build once **type-checked three
+pages that 500 on every request**, and only loading them caught it.

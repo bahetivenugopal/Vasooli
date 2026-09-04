@@ -15,6 +15,8 @@ import json
 from datetime import UTC, datetime
 from pathlib import Path
 
+from pydantic import ValidationError
+
 from app.engines.mandate_recovery.schemas import Mandate
 
 #: The repo root, five levels up from this file.
@@ -54,11 +56,14 @@ def load_mandates(path: Path | str | None = None) -> list[Mandate]:
     dataset = resolve_dataset(path)
     mandates: list[Mandate] = []
     with dataset.open(encoding="utf-8") as fh:
-        for line in fh:
-            line = line.strip()
+        for lineno, raw in enumerate(fh, start=1):
+            line = raw.strip()
             if not line:
                 continue
-            mandates.append(_to_utc(Mandate.model_validate(json.loads(line))))
+            try:
+                mandates.append(_to_utc(Mandate.model_validate(json.loads(line))))
+            except (json.JSONDecodeError, ValidationError) as exc:
+                raise DatasetError(_malformed(dataset, lineno, exc)) from exc
     if not mandates:
         raise DatasetError(f"{dataset} contains no records")
     return sorted(mandates, key=lambda m: m.mandate_id)
@@ -131,3 +136,24 @@ def dataset_anchor(mandates: list[Mandate]) -> datetime:
     if attempted:
         return max(attempted)
     return min(m.cycle_started_at for m in mandates)
+
+
+def _malformed(dataset: Path, lineno: int, exc: Exception) -> str:
+    """A malformed record names the file and the line, and stops the run.
+
+    Phase 7 §5.4 rehearses "empty or malformed input batch" as a failure the
+    system must degrade cleanly on. A raw `JSONDecodeError` from inside a read
+    loop is not clean: it says nothing about which file or which record, and it
+    reaches the operator as a traceback through three frames of engine code.
+
+    Failing here rather than skipping the line is deliberate, and is the same
+    fail-closed direction the policy engine takes. A run that silently drops the
+    records it could not read reports a recovery rate over a denominator nobody
+    chose.
+    """
+    detail = str(exc).splitlines()[0]
+    return (
+        f"{dataset.name} line {lineno} is not a valid record: {detail}. "
+        "Regenerate the dataset with `python -m data.generators.cli` rather than "
+        "editing it by hand."
+    )

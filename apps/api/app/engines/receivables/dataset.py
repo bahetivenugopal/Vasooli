@@ -16,6 +16,8 @@ import json
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
+from pydantic import ValidationError
+
 from app.engines.receivables.schemas import Invoice
 
 #: The repo root, five levels up from this file.
@@ -66,11 +68,14 @@ def load_invoices(path: Path | str | None = None) -> list[Invoice]:
     dataset = resolve_dataset(path)
     invoices: list[Invoice] = []
     with dataset.open(encoding="utf-8") as fh:
-        for line in fh:
-            line = line.strip()
+        for lineno, raw in enumerate(fh, start=1):
+            line = raw.strip()
             if not line:
                 continue
-            invoices.append(_to_utc(Invoice.model_validate(json.loads(line))))
+            try:
+                invoices.append(_to_utc(Invoice.model_validate(json.loads(line))))
+            except (json.JSONDecodeError, ValidationError) as exc:
+                raise DatasetError(_malformed(dataset, lineno, exc)) from exc
     if not invoices:
         raise DatasetError(f"{dataset} contains no records")
     return sorted(invoices, key=lambda i: i.invoice_id)
@@ -144,6 +149,28 @@ def dataset_anchor(invoices: list[Invoice]) -> datetime:
     # event, where "at or after" comparisons become a coin toss.
     latest = max(observed)
     return (latest + timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)
+
+
+
+def _malformed(dataset: Path, lineno: int, exc: Exception) -> str:
+    """A malformed record names the file and the line, and stops the run.
+
+    Phase 7 §5.4 rehearses "empty or malformed input batch" as a failure the
+    system must degrade cleanly on. A raw `JSONDecodeError` from inside a read
+    loop is not clean: it says nothing about which file or which record, and it
+    reaches the operator as a traceback through three frames of engine code.
+
+    Failing here rather than skipping the line is deliberate, and is the same
+    fail-closed direction the policy engine takes. A run that silently drops the
+    records it could not read reports a recovery rate over a denominator nobody
+    chose.
+    """
+    detail = str(exc).splitlines()[0]
+    return (
+        f"{dataset.name} line {lineno} is not a valid record: {detail}. "
+        "Regenerate the dataset with `python -m data.generators.cli` rather than "
+        "editing it by hand."
+    )
 
 
 __all__ = [

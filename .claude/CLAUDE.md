@@ -108,9 +108,13 @@ payoff for judges in a ~30-hour build.
 apps/web/src/components/ui/        shadcn primitives — the ONE source of truth, never duplicate
 apps/web/src/components/features/  Vasooli-specific composed components
 apps/api/app/engines/<name>/       one folder per engine, same internal shape
-apps/api/app/services/             the shared core, literally:
+apps/api/app/services/             the shared core. The four that carry the
+                                   decision loop:
                                      razorpay_client.py · llm_agent.py
                                      policy_engine.py   · audit_trail.py
+                                   plus the cross-engine reporting layer:
+                                     overview.py · unified_run.py
+                                     integrity.py · audit_validation.py
 apps/api/app/services/prompts/     versioned prompt files
 apps/api/app/tests/                pytest
 data/generators/                   seeded synthetic data

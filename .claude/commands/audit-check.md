@@ -8,6 +8,26 @@ argument-hint: <batch_id> [--dump]
 Validate the audit trail for batch `$1`. Pass `--dump` to print every entry in
 full as well as the validation result.
 
+> ## Run it, don't walk it
+>
+> As of Phase 7 these validations are **executable**. Do not perform them by
+> reading the trail — a hand-walked checklist cannot say which of the twelve it
+> skipped.
+>
+> ```bash
+> python scripts/audit_check.py $1 --dump
+> python scripts/audit_check.py --unified <run_id> --integrity
+> python scripts/audit_check.py --latest --integrity
+> ```
+>
+> The implementation is `app/services/audit_validation.py` (the twelve below)
+> and `app/services/integrity.py` (the cross-source metric comparison and the
+> two traceability checks). The command exits non-zero on any violation.
+>
+> The rest of this file remains the specification the code implements. If the
+> two ever disagree, that is a bug in one of them — resolve it, don't route
+> around it. See [ADR 0013](../../docs/adr/0013-metric-integrity-as-an-executable-audit.md).
+
 Read the `audit-schema` skill first — it defines the required fields, the allowed
 `action` and `outcome` values, and the `<skill>:<rule-id>` citation format.
 
@@ -50,7 +70,14 @@ rules are real.
     the engine run — an unlogged action is unprovable and counts as a failure.
 11. **Bounds were respected.** No entity exceeded its retry budget; where
     `attempts_remaining` is recorded, it decreases monotonically and never goes
-    negative.
+    negative — **per budget, not per entity.** An entity has two attempt budgets
+    sharing one column: the debit budget and the outreach budget (Phase 4's
+    `outreach_entity()`, which presents the message count as the attempt count so
+    a dunning message is not gated on a spent debit budget). So one entity's
+    timeline legitimately shows 0 then 3, and comparing across the two would
+    report a refill that never happened. A charge-path decision records the
+    `proposed_action` it was gating; a communication records its `kind`; every
+    entry reporting a budget carries exactly one of the two, and a test pins it.
 12. **Terminal means terminal.** After a `halt_schedule` entry, no later
     `attempt_charge` exists for that entity. This is the `MANDATE_REVOKED` hard
     stop — check it across every code path, not just the obvious one.

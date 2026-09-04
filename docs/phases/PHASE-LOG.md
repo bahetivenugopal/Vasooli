@@ -888,3 +888,195 @@ synchronous POST with an elapsed counter, which is more reliable to demo), no
 mobile-responsive polish beyond "does not break", no deployment. Engine 1's
 wall-clock audit timestamps were left as they are (deviation #4). The receivables
 `InvoiceTimeline.replies` shape was left untyped. Commits were left to the user.
+
+---
+
+## Phase 7 — Integration, Hardening & Documentation
+
+**Status:** complete · **Date:** 2026-09-04
+**Verified by:** 600 pytest passing (54 new), `ruff check` clean from the repo
+root *and* from `apps/api/`, `npm run check` clean (Prettier, ESLint, 24 Vitest,
+production build), a full live unified run and a full no-provider unified run
+both passing their own integrity audit with **0 violations**, determinism
+confirmed on both paths, and — actually performed — a **clean clone in a fresh
+directory** taken through the README from `pip install` to a green suite.
+
+### What now exists
+
+Three service modules and two commands that turn three engines into one product:
+
+- `services/unified_run.py` — `UnifiedRunner`, one run id over three batch ids,
+  plus `fingerprint()` and `report_for()`
+- `services/integrity.py` — the metric-integrity audit: recompute, compare
+  across every reporting path, prove no orphan actions and no untraced money
+- `services/audit_validation.py` — the twelve `/audit-check` validations, as code
+- `models/unified.py` — the consolidated report shape
+- `scripts/unified_demo.py` — **the one command**
+- `scripts/audit_check.py` — `/audit-check`, runnable, non-zero on violation
+
+Plus `docs/RESULTS.md`, `docs/failure-paths.md`, ADRs 0012 and 0013, a rewritten
+README, an extended `docs/architecture.md`, and three new test modules
+(`test_unified_run.py`, `test_metric_integrity.py`, `test_failure_paths.py`).
+
+### The measured result, in one line
+
+**Rs 94.90 L recovered of Rs 2.41 Cr at risk — 39.31% — over 348 audited
+decisions, 0 schema violations, integrity PASS on all four checks.** Identical to
+the three separate runs Phase 6 reported, which is the first evidence that
+unifying them changed nothing it should not have. Full numbers, both modes, and
+every limitation are in `docs/RESULTS.md` — **quote that file, not this line.**
+
+### Deviations from the phase file, and why
+
+| # | Deviation | Why it happened |
+| --- | --- | --- |
+| 1 | **A unified *run id* over three derived batch ids, not literally "one `batch_id`"** | §5.1 asks for one batch id spanning three engines. `BatchRun.batch_id` is a primary key and `start_batch()` refuses to reuse one — deliberately, since Phase 1, because reusing an id merges two runs into one set of metrics. Collapsing to one row would also have cost the per-engine contribution split (different seed, dataset, clock and recovery definition each), which is the only thing making the blended headline defensible. One id addresses the run; three ids store it. ADR 0012. |
+| 2 | **The console report *is* the dashboard's object, not a second rendering checked against it** | §5.1 requires the two to "agree exactly". Building two renderings and comparing them makes agreement a test that can start failing. Making the report an `OverviewSummary` with a reproducibility header makes it structural — there is one computation. The comparison test still exists, now asserting the FastAPI route returns it unchanged. |
+| 3 | **`/audit-check` became executable code** | §5.3 says "run `/audit-check` across the full unified run". It was a markdown checklist a person walks, and a hand-walked checklist cannot say which of its twelve validations it skipped. Now `services/audit_validation.py`, with three callers — the CLI, the report, the tests — so they cannot disagree about whether a run is clean. The command file remains the specification. ADR 0013. |
+| 4 | **The unified runner takes `now` per engine and defaults to nothing** | The obvious design is one clock for one run. It is wrong here, and silently: all three engines derive `now` differently and each is right for its own data. A forced clock makes two wrong, every compliance gate fires for the wrong reason, and the run still completes looking fine. |
+| 5 | **Determinism is asserted over metrics, not over rows** | §5.3 wants "identical results from the same seed". Engine 1 stamps its audit entries with wall-clock time (Phase 6 deviation #4, deliberately left), so an entry-by-entry comparison reports every run as non-deterministic and proves nothing. `fingerprint()` compares every number — money, rates, counts, each engine's headline — and that is what gets quoted. |
+| 6 | **Ten failure paths rehearsed, not eight** | §5.4 lists ten; §8's acceptance criteria say eight. Rehearsed all ten. Path 10 (backend down while the dashboard is open) is genuinely half browser-side, so its API half is asserted and its browser half stays in the smoke checklist with a screenshot. |
+| 7 | **Three defects fixed, which §4 permits, and nothing else** | "New features are out of scope unless something is genuinely broken." Each fix below was found by the integration work and is genuinely broken. No refactors, no elegance passes. |
+
+### The four defects the integration work found
+
+Recorded because Phase 8's technical-obstacles answer should come from these
+rather than from invented ones, and because three of the four were invisible to
+every existing test.
+
+1. **`npm run check` did not exist.** The README documented it, Phase 6's log
+   claims it ran clean, and the script was never in `package.json` — along with
+   `format`, `format:check` and `test`. Found by the clean clone, which is
+   exactly the class of failure §5.2 says that step catches: it works locally
+   because the author runs the underlying tools by hand. Added, and it passes.
+2. **A malformed dataset record raised a bare `JSONDecodeError`** three frames
+   deep in a read loop, naming neither file nor line. Now a `DatasetError`
+   naming both, in all three engines. It **fails rather than skipping the line**
+   — the same fail-closed direction the policy engine takes, because a run that
+   silently drops what it could not read reports a rate over a denominator
+   nobody chose.
+3. **A leg that died left its `BatchRun` stuck `running` forever.** Invisible to
+   the overview (which reads completed runs only) while still holding its batch
+   id, so the *next* attempt failed with "that batch id already exists" rather
+   than with the actual cause. Now marked `failed`, best-effort, without masking
+   the original exception.
+4. **The first draft of the integrity audit was wrong in two ways**, and both
+   are worth knowing. See the two traps below.
+
+### Things a later phase will otherwise get wrong
+
+**One column, two budgets.** `attempts_remaining` counts down the *debit* budget
+and the *outreach* budget on the same entity, because Phase 4's
+`outreach_entity()` presents the message count as the attempt count. A naive
+monotonicity check over an entity's timeline reported 20 "budgets refilling" that
+were nothing of the sort. `audit_validation.budget_kind()` separates them using
+the marker each decision already carries — a charge-path decision records
+`metadata.proposed_action`, a communication records `metadata.kind` — and a test
+pins that every entry reporting a budget carries **exactly one** of the two. Do
+not "simplify" that back to per-entity.
+
+**The authorisation lives on the action's own entry, not on a predecessor.**
+`PolicyDecision.audit_fields()` maps straight onto `record()`, so the rule that
+permitted an action and the record of the action are the same row. The first
+orphan check demanded a preceding decision entry and flagged four perfectly
+authorised charges — healthy mandates charged on their first due debit, which
+have exactly one entry and cite `policy_engine:permitted`. An orphan is an entry
+whose citation names no policy decision, not one that lacks a predecessor.
+
+**Three engines book recovered money on three different actions**, and all three
+are right: Engine 1 on `schedule_retry` (the decision entry, resolved to success
+afterwards — the one documented exception to append-only), Engine 2 on
+`attempt_charge`, Engine 3 on `record_promise_to_pay`. `RECOVERY_BEARING_ACTIONS`
+in `integrity.py` names all three. A fourth engine booking money on a fourth
+action will be reported as untraced until that set is updated — fail-closed, and
+a maintenance edge worth knowing about.
+
+**The integrity recomputation must not share code with what it checks.**
+`integrity.recompute()` deliberately re-implements the arithmetic rather than
+calling `batch_summary()`. If it called it, the comparison would be a tautology
+that passes forever. Do not "de-duplicate" the two.
+
+**The demo command exits non-zero when integrity fails**, and that is load
+bearing. A consolidated report that prints FAIL and exits 0 is a report a CI job
+would wave through.
+
+**Every check in the integrity audit is negatively tested.** Each defect is
+injected and the check asserted to catch it. A validator that has only ever seen
+clean data might be returning `passed=True` unconditionally, and the entire
+credibility argument rests on it. Keep that property when adding a check.
+
+### Observations worth carrying forward
+
+- **The unified run reproduced Phase 6's three separate runs exactly** — same
+  Rs 94.90 L, same 348 entries, same trust strip. That was the single most
+  reassuring result of the phase: unification changed nothing it should not have.
+- **The no-provider run is a genuinely different story, not a smaller one.**
+  Rs 1.96 L of Rs 1.49 Cr, 1.32%, 318 entries, integrity PASS. Engines 1 and 2
+  recover *identical* money either way; Engine 3 recovers Rs 0, because reading a
+  reply is the task. Both are honest. Say which one a number came from.
+- **The confidence floor fired unprompted on the live run.** The model returned
+  **0.45** on the ambiguous corridor — below the 0.60 floor — so the
+  deterministic classifier took over and the result is audited
+  `source: deterministic`. Phase 3 saw 0.55 on the same corridor. The pattern
+  Phase 4 identified holds: well calibrated when asked to judge, overconfident
+  when asked to act.
+- **`policy_violations` stayed 0 and refusals stayed non-zero** on every run, in
+  both modes — the shape Phase 1 said to expect.
+- **The clean clone took about four minutes end to end** and needed no keys, no
+  database setup and no dataset generation. That property is worth demonstrating
+  on camera; it is the most practically valuable thing in the build.
+- **`policy_engine.py` coverage is 99%** (248 statements, 1 missed), measured
+  with `pytest --cov=app.services.policy_engine`. `pytest-cov` is **not** in
+  `requirements.txt` — it was installed ad hoc to measure. Add it if coverage
+  becomes a routine check.
+
+### Still weak or unpolished — what Phase 8 should not point a camera at
+
+The phase file asks for this explicitly, and it is the honest material the
+submission's technical-obstacles answer wants.
+
+1. **Engine 2's blended recovery rate is 1.69% and looks broken.** It is
+   correct — 80% of the money at risk sits above the AFA threshold or behind a
+   hard stop — and the addressable rate is 30.48%. But it needs a sentence of
+   explanation every single time, and a viewer who reads the number before the
+   sentence has already formed a wrong impression. Lead with the compliance
+   blocks on this engine, not with the rate.
+2. **Engine 2's default run clock lands at 06:39 IST**, outside the outreach
+   window, so *every* dunning message is held. That is `policy-bounds:QH1`
+   working, and it looks like a broken dunning path. Use `--now` for a
+   mid-afternoon clock if the demo needs to show a message going out.
+3. **Engine 3's 100% extraction score is a liability on camera**, not an asset.
+   Show the adversarial probe instead — twelve hand-written replies, zero
+   fabricated promises, three honest abstentions. A panelist who hears "100%"
+   discounts everything after it.
+4. **The unified headline is a breadth figure and Engine 3 dominates it.**
+   Rs 92.94 L of the Rs 94.90 L is Engine 3, because a B2B invoice book is three
+   orders of magnitude larger than a mandate book. The contribution chart shows
+   rates rather than rupees for exactly this reason (Phase 6 deviation #6), and
+   the headline should never be presented as three comparable contributions.
+5. **`BatchRun.notes` is now an eight-key untyped grab-bag.** Phase 6 flagged it;
+   this phase added `unified_run_id` to it. It works and it is not a schema.
+6. **A unified run has no table.** It is an id convention plus a key in three
+   JSON blobs. Nothing stops a hand-written batch id colliding with a derived
+   leg id. Fine for this build; not a design to extend.
+7. **Engine 1's audit timestamps are still wall-clock** while Engines 2 and 3
+   use their run clocks. Left alone again, for Phase 6's reason: its decision
+   entries are wall-clock too, so they are wrong *together* and therefore
+   ordered. Fixing it means moving its decision entries, which is a Phase 3
+   change, not a Phase 7 one.
+8. **Two failure paths have no visible artefact.** The rate-limit backoff is four
+   seconds of nothing happening; the Razorpay error path is one audit row. Both
+   are in `docs/failure-paths.md` with a recommendation on each.
+9. **`docs/pitch/` still has no video script or submission answers.** That is
+   Phase 8's job and nothing here pre-empted it.
+10. **The screenshots in `docs/pitch/screenshots/` predate the unified run.**
+    They show Phase 6's three separate batch ids. The numbers are identical, so
+    nothing in them is wrong — but the batch ids on screen will not match a
+    freshly-run unified demo. Recapture before recording.
+
+### Not done in this phase (deliberately)
+
+No deployment, no video, no new engine capability, and no refactors that were not
+fixing a real defect. `pytest-cov` was not added to `requirements.txt`. Engine
+1's wall-clock timestamps and the untyped `BatchRun.notes` were both left as they
+are. The screenshots were not recaptured. Commits were left to the user.

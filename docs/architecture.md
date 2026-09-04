@@ -643,6 +643,83 @@ becomes durable state**, which is why it carries `provenance` and
 `model_confidence` as columns rather than only in the trail. An abstention never
 reaches it.
 
+## The unified run — three engines as one auditable unit
+
+Everything above describes three engines that work. This describes them working
+*together*, which is what the product actually is and what the demo depends on.
+
+```
+                    scripts/unified_demo.py --seed 42
+                                  │
+                    services/unified_run.py  (UnifiedRunner)
+                                  │
+        ┌─────────────────────────┼─────────────────────────┐
+        ▼                         ▼                         ▼
+  RootCauseRunner           MandateRunner          ReceivablesRunner
+   <run>-rc                  <run>-mr                 <run>-rcv
+        └─────────────────────────┼─────────────────────────┘
+                                  │  all three write audit_entries
+                                  ▼
+                       services/overview.py
+                    (recomputed from the trail)
+                                  │
+                    ┌─────────────┴─────────────┐
+                    ▼                           ▼
+            console report              GET /api/v1/overview
+                                                │
+                                                ▼
+                                        the dashboard
+```
+
+### One run id, three batch ids
+
+A unified run has one **run id**; the three per-engine batch ids are derived from
+it (`-rc` / `-mr` / `-rcv`), and each engine's `BatchRun.notes` carries the
+`unified_run_id` so the relationship reads both ways. One id addresses the run;
+three ids store it, because the per-engine contribution split — different seed,
+dataset, clock and recovery definition per engine — is what makes the blended
+headline defensible. [ADR 0012](adr/0012-unified-run-id-and-consolidated-report.md).
+
+### The console and the dashboard are one computation
+
+The consolidated report *is* an `OverviewSummary` with a reproducibility header
+around it, and `/api/v1/overview` serves that same object to the browser. "The
+console report and the dashboard agree exactly" is therefore structural: there is
+one computation with two renderings, not two computations checked against each
+other once.
+
+### Each engine keeps its own clock, deliberately
+
+The runner takes `now` as a **per-engine** override and defaults to nothing.
+Engine 1 anchors on the last payment attempt, Engine 2 on the latest debit
+actually attempted, Engine 3 on the latest observed event rounded up to the hour.
+Each is right for its own dataset, and forcing one clock across all three would
+make two of them wrong — silently, because every compliance gate would still fire
+and the run would still complete.
+
+### The run audits itself
+
+`services/integrity.py` recomputes every headline metric a **fourth** time from
+raw `audit_entries` rows, with arithmetic that shares no code path with
+`batch_summary()` or `OverviewService` — if it shared one, the comparison would
+be a tautology — then compares all three sources per batch, per engine and per
+provenance source. Alongside it, `services/audit_validation.py` runs the twelve
+`/audit-check` validations, and two traceability checks prove there are no orphan
+actions and no untraced money.
+
+Four checks, all four required to pass, and the demo command exits non-zero if
+any of them fails. Each is negatively tested — the defect injected, the check
+asserted to catch it. [ADR 0013](adr/0013-metric-integrity-as-an-executable-audit.md).
+
+```
+services/audit_validation.py   the twelve validations, executable
+services/integrity.py          recompute + compare + traceability
+scripts/audit_check.py         the CLI, exits non-zero on any violation
+```
+
+One implementation, three callers — the command, the consolidated report and the
+test suite cannot disagree about whether a run is clean.
+
 ## Frontend — `apps/web/`
 
 Next.js 14 App Router, TypeScript, Tailwind, shadcn/ui, Recharts. Four surfaces,
