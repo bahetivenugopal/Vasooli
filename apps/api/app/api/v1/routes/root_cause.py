@@ -5,9 +5,11 @@ work, `POST /runs`, delegates the whole loop to `RootCauseRunner`: a route that
 reimplemented any part of detect/diagnose/authorize would be a second decision
 path with no audit trail behind it.
 
-Reads come from the tables the run wrote, and the run summary is recomputed from
-the audit entries rather than read from the stored snapshot — so a figure served
-here and the trail behind it cannot disagree.
+Reads come from the tables the run wrote. The money figures a caller quotes come
+from `/audit/batches/{batch_id}/summary`, which recomputes them from the entries,
+so a headline served here and the trail behind it cannot disagree. The
+engine-specific breakdowns — which need the run's own outcomes — are served from
+what the run stored, by `GET /runs/{batch_id}/summary`.
 """
 
 from __future__ import annotations
@@ -99,6 +101,33 @@ def list_runs(
 def get_run(batch_id: str, db: DbDep) -> BatchRunRead:
     """One run's record, including the dataset batch id it consumed."""
     return BatchRunRead.model_validate(_require_run(batch_id, db))
+
+
+@router.get("/runs/{batch_id}/summary", response_model=RunSummary)
+def get_run_summary(batch_id: str, db: DbDep) -> RunSummary:
+    """The run's own summary — the engine-specific figures the dashboard reads.
+
+    Served from what the run stored rather than recomputed, because the splits in
+    it (per-determination diagnoses, detection scoring against the generator's
+    ground truth) need the run's outcomes and the dataset behind them, and nothing
+    serving an API request should be re-running an engine.
+
+    The money figures inside it were read off the audit trail at the end of the
+    run, and `/audit/batches/{batch_id}/summary` recomputes those independently
+    — so the stored copy is checkable against the trail rather than merely
+    convenient. Quote that route for a headline; quote this one for the breakdown.
+    """
+    run = _require_run(batch_id, db)
+    stored = (run.notes or {}).get("run_summary")
+    if stored is None:
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                f"run {batch_id} stored no engine summary — it predates the field, "
+                "or the run did not complete"
+            ),
+        )
+    return RunSummary.model_validate(stored)
 
 
 @router.get("/runs/{batch_id}/detections", response_model=list[CorridorDetectionRead])

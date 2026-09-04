@@ -76,6 +76,19 @@ from app.services.razorpay_client import RazorpayClient
 #: and pulling it in at module import would make `app` unusable without it.
 RETRY_MODEL_IMPORT = "data.generators.retry_model"
 
+#: What Engine 1's recovery figure means, and the one thing it deliberately does
+#: not claim. A module constant because the cross-engine overview quotes it, and
+#: because the reroute caveat is the sort of thing that quietly disappears from a
+#: pitch if it only lives in a metrics doc.
+RECOVERY_DEFINITION = (
+    "amount recovered = the value of failed payments that a per-payment retry, "
+    "authorised against that payment's own decline class and budget, went on to "
+    "settle. Corridor-level actions contribute nothing to it: a reroute is "
+    "authorised, bounded and expiring, but the retry-success model has no route "
+    "dimension, so crediting rerouted traffic with an uplift would be inventing "
+    "the headline number."
+)
+
 
 @dataclass
 class RunArtefacts:
@@ -190,7 +203,17 @@ class RootCauseRunner:
             corridor_outcomes=corridor_outcomes,
             detection_score=detection_score,
         )
-        self._trail.complete_batch(batch_id, status=BatchStatus.COMPLETED)
+        run = self._trail.complete_batch(batch_id, status=BatchStatus.COMPLETED)
+        # The engine's own summary, persisted beside the dataset id that produced
+        # it. Unlike the audit trail's `batch_summary()`, this one cannot be
+        # recomputed from the entries alone — the per-class and per-branch splits
+        # need the run's outcomes and the dataset behind them — so the dashboard
+        # can only show it if the run stores it. The money figures inside it were
+        # themselves read off the trail at the end of the run, and
+        # `/audit/batches/{id}/summary` recomputes those independently, which is
+        # what makes the stored copy checkable rather than merely convenient.
+        run.notes = {**(run.notes or {}), "run_summary": summary.model_dump(mode="json")}
+        self._db.commit()
         return RunArtefacts(
             summary=summary,
             detections=detections,

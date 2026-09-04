@@ -1,0 +1,598 @@
+{
+  "generated_at": "2026-09-04T13:17:29.481139Z",
+  "batch_ids": {
+    "root_cause": "ui-rc-f",
+    "mandate_recovery": "ui-mr-f",
+    "receivables": "ui-rcv-f"
+  },
+  "engines_reporting": ["root_cause", "mandate_recovery", "receivables"],
+  "engines_missing": [],
+  "entries": 348,
+  "amount_at_risk_paise": 2414466500,
+  "amount_recovered_paise": 949007000,
+  "recovery_rate": 0.3931,
+  "blended_caveat": "Rupees at risk and rupees recovered are summed across the three engines' audit entries. The engines measure exposure differently — corridor value at risk, a mandate cycle's permitted debit, an overdue invoice's balance — so the blended rate is a breadth figure, not a like-for-like one. Each engine's own definition is on its contribution row, and the per-source split below keeps reasoned and ruled recovery apart.",
+  "by_engine": [
+    {
+      "engine": "root_cause",
+      "label": "Root-Cause Recovery",
+      "batch_id": "ui-rc-f",
+      "seed": 42,
+      "status": "completed",
+      "started_at": "2026-09-04T13:15:27.437495Z",
+      "completed_at": "2026-09-04T13:15:37.457845Z",
+      "dataset_batch_id": "pay-s42-d5db86f7",
+      "entries": 110,
+      "amount_at_risk_paise": 52520600,
+      "amount_recovered_paise": 18250300,
+      "recovery_rate": 0.3475,
+      "by_source": {
+        "model": {
+          "entries": 2,
+          "amount_at_risk_paise": 0,
+          "amount_recovered_paise": 0,
+          "recovery_rate": 0.0
+        },
+        "deterministic": {
+          "entries": 108,
+          "amount_at_risk_paise": 52520600,
+          "amount_recovered_paise": 18250300,
+          "recovery_rate": 0.3475
+        }
+      },
+      "recovery_definition": "amount recovered = the value of failed payments that a per-payment retry, authorised against that payment's own decline class and budget, went on to settle. Corridor-level actions contribute nothing to it: a reroute is authorised, bounded and expiring, but the retry-success model has no route dimension, so crediting rerouted traffic with an uplift would be inventing the headline number."
+    },
+    {
+      "engine": "mandate_recovery",
+      "label": "Mandate & Subscription Recovery",
+      "batch_id": "ui-mr-f",
+      "seed": 42,
+      "status": "completed",
+      "started_at": "2026-09-04T13:15:38.439174Z",
+      "completed_at": "2026-09-04T13:15:40.395121Z",
+      "dataset_batch_id": "mnd-s42-dabc793d",
+      "entries": 111,
+      "amount_at_risk_paise": 79234600,
+      "amount_recovered_paise": 1336200,
+      "recovery_rate": 0.0169,
+      "by_source": {
+        "model": {
+          "entries": 15,
+          "amount_at_risk_paise": 0,
+          "amount_recovered_paise": 0,
+          "recovery_rate": 0.0
+        },
+        "deterministic": {
+          "entries": 96,
+          "amount_at_risk_paise": 79234600,
+          "amount_recovered_paise": 1336200,
+          "recovery_rate": 0.0169
+        }
+      },
+      "recovery_definition": "amount at risk on mandates whose next step the policy engine permitted to be a debit this cycle (attempted, or deferred on spacing). Excludes every mandate a compliance gate, a hard decline or a hard stop refused — money no compliant system may collect automatically. Reported beside the headline rate, not instead of it."
+    },
+    {
+      "engine": "receivables",
+      "label": "B2B Receivables Chaser",
+      "batch_id": "ui-rcv-f",
+      "seed": 42,
+      "status": "completed",
+      "started_at": "2026-09-04T13:15:41.216705Z",
+      "completed_at": "2026-09-04T13:15:43.443606Z",
+      "dataset_batch_id": "inv-s42-680b8a62",
+      "entries": 127,
+      "amount_at_risk_paise": 2282711300,
+      "amount_recovered_paise": 929420500,
+      "recovery_rate": 0.4072,
+      "by_source": {
+        "model": {
+          "entries": 73,
+          "amount_at_risk_paise": 1240637300,
+          "amount_recovered_paise": 929420500,
+          "recovery_rate": 0.7491
+        },
+        "deterministic": {
+          "entries": 54,
+          "amount_at_risk_paise": 1042074000,
+          "amount_recovered_paise": 0,
+          "recovery_rate": 0.0
+        }
+      },
+      "recovery_definition": "amount recovered = the outstanding value of invoices that settled against a promise the engine extracted and tracked as kept. The engine does not collect: the payments are in the ledger, and what this measures is the engine correctly identifying which of them honoured a commitment. Stated explicitly because a recovery rate that implied the engine caused the payment would be claiming more than the run demonstrates."
+    }
+  ],
+  "by_source": {
+    "model": {
+      "entries": 90,
+      "amount_at_risk_paise": 1240637300,
+      "amount_recovered_paise": 929420500,
+      "recovery_rate": 0.7491
+    },
+    "deterministic": {
+      "entries": 258,
+      "amount_at_risk_paise": 1173829200,
+      "amount_recovered_paise": 19586500,
+      "recovery_rate": 0.0167
+    }
+  },
+  "trust": [
+    {
+      "key": "policy_denials",
+      "label": "Policy denials",
+      "value": 95,
+      "meaning": "Actions the system proposed and its own rules refused. A run with none means the gate never fired.",
+      "by_rule": {
+        "rbi-mandate-rules:A3": 11,
+        "policy-bounds:QH1": 24,
+        "rbi-mandate-rules:A2": 21,
+        "rbi-mandate-rules:PartB.paused": 5,
+        "rbi-mandate-rules:A1": 1,
+        "rbi-mandate-rules:A4": 7,
+        "decline-taxonomy:budget.HARD": 5,
+        "rbi-mandate-rules:PartB.min_spacing": 1,
+        "rbi-mandate-rules:PartB.notice_staleness": 2,
+        "rbi-mandate-rules:PartB.max_retries": 1,
+        "corridor-detection:RR3": 1,
+        "policy-bounds:HE1": 1,
+        "decline-taxonomy:budget.UNKNOWN": 1,
+        "policy-bounds:CD1": 5,
+        "policy-bounds:RL4": 8,
+        "policy-bounds:RL2": 1
+      }
+    },
+    {
+      "key": "compliance_blocked",
+      "label": "Compliance-blocked",
+      "value": 40,
+      "meaning": "Debits refused because an RBI e-mandate precondition was not met. Each one is a charge a blind retrier would have attempted.",
+      "by_rule": {
+        "rbi-mandate-rules:A3": 11,
+        "rbi-mandate-rules:A2": 21,
+        "rbi-mandate-rules:PartB.paused": 5,
+        "rbi-mandate-rules:A1": 1,
+        "rbi-mandate-rules:PartB.notice_staleness": 2
+      }
+    },
+    {
+      "key": "retries_suppressed",
+      "label": "Retries suppressed",
+      "value": 28,
+      "meaning": "Attempts on dead instruments and spent budgets that were never made. Wasted attempts avoided, not revenue forgone.",
+      "by_rule": {
+        "rbi-mandate-rules:A3": 11,
+        "rbi-mandate-rules:PartB.paused": 5,
+        "rbi-mandate-rules:A1": 1,
+        "rbi-mandate-rules:A2": 4,
+        "decline-taxonomy:budget.HARD": 5,
+        "rbi-mandate-rules:PartB.max_retries": 1,
+        "decline-taxonomy:budget.UNKNOWN": 1
+      }
+    },
+    {
+      "key": "messages_suppressed",
+      "label": "Messages suppressed",
+      "value": 8,
+      "meaning": "Reminders withheld by quiet hours, a contact cap or a dispute freeze. The direct measure of harassment avoided.",
+      "by_rule": {
+        "policy-bounds:RL4": 8
+      }
+    },
+    {
+      "key": "human_escalations",
+      "label": "Human escalations",
+      "value": 38,
+      "meaning": "Cases handed to a person on evidence — a broken promise, a dispute, a high-value exposure — rather than acted on alone.",
+      "by_rule": {
+        "decline-taxonomy:budget.HARD": 5,
+        "rbi-mandate-rules:PartB.max_retries": 1,
+        "corridor-detection:RR3": 1,
+        "policy-bounds:HE1": 1,
+        "decline-taxonomy:budget.UNKNOWN": 1,
+        "policy-bounds:RL5": 21,
+        "policy-bounds:RL4": 8
+      }
+    },
+    {
+      "key": "deterministic_fallbacks",
+      "label": "Deterministic fallbacks",
+      "value": 1,
+      "meaning": "Reasoning calls that degraded to their registered fallback and still completed. The batch finishes with no provider at all.",
+      "by_rule": {
+        "policy-bounds:HE1": 1
+      }
+    },
+    {
+      "key": "abstentions",
+      "label": "Abstentions",
+      "value": 1,
+      "meaning": "Judgments the reasoning layer declined to make, routed to human review instead of guessed at.",
+      "by_rule": {
+        "policy-bounds:HE1": 1
+      }
+    }
+  ],
+  "policy_violations": 0,
+  "recent_activity": [
+    {
+      "id": 3344,
+      "timestamp": "2026-09-04T13:15:40.188522Z",
+      "batch_id": "ui-mr-f",
+      "engine": "mandate_recovery",
+      "entity_type": "mandate",
+      "entity_id": "mnd_0059",
+      "action": "schedule_retry",
+      "outcome": "pending",
+      "reason_code": "NO_STOPPING_RULE",
+      "authorising_rule": "policy_engine:permitted",
+      "rationale": "No failed debit in the current cycle and the pre-debit notice for 2026-09-03 02:10 UTC is inside the A2 window. Nothing to do.",
+      "provenance": {
+        "source": "deterministic",
+        "provider": "deterministic",
+        "model": null,
+        "cache_hit": false,
+        "prompt_version": null,
+        "abstained": false,
+        "latency_ms": null,
+        "tokens": null
+      },
+      "amount_at_risk_paise": 0,
+      "amount_recovered_paise": 0,
+      "currency": "INR",
+      "attempt_number": 1,
+      "attempts_remaining": 3,
+      "model_confidence": null,
+      "metadata": {
+        "proposed_action": "attempt_charge",
+        "next_step": "no_action",
+        "decline_code": "NONE",
+        "decline_class": "NONE",
+        "failure_route": "none",
+        "classification_rule": "decline-taxonomy:budget.SOFT",
+        "classification_reasoned": false,
+        "notice_status": "on_time",
+        "notice_lead_hours": 43.73388888888889,
+        "afa_side": "at_or_below",
+        "mandate_status": "active",
+        "attempts_in_cycle": 0,
+        "proposed_debit_at": null,
+        "proposed_notice_at": null,
+        "suppressed_retry": false,
+        "compliance_blocked": false
+      }
+    },
+    {
+      "id": 3341,
+      "timestamp": "2026-09-04T13:15:40.129852Z",
+      "batch_id": "ui-mr-f",
+      "engine": "mandate_recovery",
+      "entity_type": "mandate",
+      "entity_id": "mnd_0057",
+      "action": "halt_schedule",
+      "outcome": "halted",
+      "reason_code": "MANDATE_REVOKED",
+      "authorising_rule": "rbi-mandate-rules:A4",
+      "rationale": "Entity mnd_0057 is terminal (MANDATE_REVOKED). No further action of any kind is permitted, in any code path. No further debit and no further communication, in any code path.",
+      "provenance": {
+        "source": "deterministic",
+        "provider": "deterministic",
+        "model": null,
+        "cache_hit": false,
+        "prompt_version": null,
+        "abstained": false,
+        "latency_ms": null,
+        "tokens": null
+      },
+      "amount_at_risk_paise": 157400,
+      "amount_recovered_paise": 0,
+      "currency": "INR",
+      "attempt_number": 3,
+      "attempts_remaining": 0,
+      "model_confidence": null,
+      "metadata": {
+        "proposed_action": "attempt_charge",
+        "next_step": "halt",
+        "decline_code": "MANDATE_REVOKED",
+        "decline_class": "TERMINAL_MANDATE",
+        "failure_route": "terminal",
+        "classification_rule": "rbi-mandate-rules:A4",
+        "classification_reasoned": false,
+        "notice_status": "missing",
+        "notice_lead_hours": null,
+        "afa_side": "at_or_below",
+        "mandate_status": "revoked",
+        "attempts_in_cycle": 2,
+        "proposed_debit_at": null,
+        "proposed_notice_at": null,
+        "suppressed_retry": false,
+        "compliance_blocked": false
+      }
+    },
+    {
+      "id": 3338,
+      "timestamp": "2026-09-04T13:15:40.080112Z",
+      "batch_id": "ui-mr-f",
+      "engine": "mandate_recovery",
+      "entity_type": "mandate",
+      "entity_id": "mnd_0055",
+      "action": "schedule_retry",
+      "outcome": "pending",
+      "reason_code": "NO_STOPPING_RULE",
+      "authorising_rule": "policy_engine:permitted",
+      "rationale": "No failed debit in the current cycle and the pre-debit notice for 2026-09-01 11:38 UTC is inside the A2 window. Nothing to do.",
+      "provenance": {
+        "source": "deterministic",
+        "provider": "deterministic",
+        "model": null,
+        "cache_hit": false,
+        "prompt_version": null,
+        "abstained": false,
+        "latency_ms": null,
+        "tokens": null
+      },
+      "amount_at_risk_paise": 0,
+      "amount_recovered_paise": 0,
+      "currency": "INR",
+      "attempt_number": 1,
+      "attempts_remaining": 3,
+      "model_confidence": null,
+      "metadata": {
+        "proposed_action": "attempt_charge",
+        "next_step": "no_action",
+        "decline_code": "NONE",
+        "decline_class": "NONE",
+        "failure_route": "none",
+        "classification_rule": "decline-taxonomy:budget.SOFT",
+        "classification_reasoned": false,
+        "notice_status": "on_time",
+        "notice_lead_hours": 29.099722222222223,
+        "afa_side": "at_or_below",
+        "mandate_status": "active",
+        "attempts_in_cycle": 0,
+        "proposed_debit_at": null,
+        "proposed_notice_at": null,
+        "suppressed_retry": false,
+        "compliance_blocked": false
+      }
+    },
+    {
+      "id": 3243,
+      "timestamp": "2026-09-04T13:15:37.438102Z",
+      "batch_id": "ui-rc-f",
+      "engine": "root_cause",
+      "entity_type": "payment",
+      "entity_id": "att_00585",
+      "action": "block_attempt",
+      "outcome": "blocked",
+      "reason_code": "COOLDOWN_NOT_ELAPSED",
+      "authorising_rule": "policy-bounds:CD1",
+      "rationale": "Last attempt was at 2026-08-31 17:34 UTC; the next is not permitted before 2026-08-31 23:34 UTC under escalating backoff.",
+      "provenance": {
+        "source": "deterministic",
+        "provider": "deterministic",
+        "model": null,
+        "cache_hit": false,
+        "prompt_version": null,
+        "abstained": false,
+        "latency_ms": null,
+        "tokens": null
+      },
+      "amount_at_risk_paise": 22700,
+      "amount_recovered_paise": 0,
+      "currency": "INR",
+      "attempt_number": 1,
+      "attempts_remaining": 3,
+      "model_confidence": null,
+      "metadata": {
+        "proposed_action": "schedule_retry",
+        "decline_code": "AUTH_TIMEOUT",
+        "decline_class": "SOFT",
+        "corridor": "UTIB:upi:rt_upi_npci_a",
+        "rerouted_to": null,
+        "suppressed_retry": false,
+        "deferred_retry": true
+      }
+    },
+    {
+      "id": 3242,
+      "timestamp": "2026-09-04T13:15:37.427354Z",
+      "batch_id": "ui-rc-f",
+      "engine": "root_cause",
+      "entity_type": "payment",
+      "entity_id": "att_00584",
+      "action": "block_attempt",
+      "outcome": "blocked",
+      "reason_code": "COOLDOWN_NOT_ELAPSED",
+      "authorising_rule": "policy-bounds:CD1",
+      "rationale": "Last attempt was at 2026-08-31 17:26 UTC; the next is not permitted before 2026-08-31 23:26 UTC under escalating backoff.",
+      "provenance": {
+        "source": "deterministic",
+        "provider": "deterministic",
+        "model": null,
+        "cache_hit": false,
+        "prompt_version": null,
+        "abstained": false,
+        "latency_ms": null,
+        "tokens": null
+      },
+      "amount_at_risk_paise": 73000,
+      "amount_recovered_paise": 0,
+      "currency": "INR",
+      "attempt_number": 1,
+      "attempts_remaining": 3,
+      "model_confidence": null,
+      "metadata": {
+        "proposed_action": "schedule_retry",
+        "decline_code": "INSUFFICIENT_FUNDS",
+        "decline_class": "SOFT",
+        "corridor": "RATN:card:rt_card_acq_1",
+        "rerouted_to": null,
+        "suppressed_retry": false,
+        "deferred_retry": true
+      }
+    },
+    {
+      "id": 3241,
+      "timestamp": "2026-09-04T13:15:37.419309Z",
+      "batch_id": "ui-rc-f",
+      "engine": "root_cause",
+      "entity_type": "payment",
+      "entity_id": "att_00544",
+      "action": "block_attempt",
+      "outcome": "blocked",
+      "reason_code": "COOLDOWN_NOT_ELAPSED",
+      "authorising_rule": "policy-bounds:CD1",
+      "rationale": "Last attempt was at 2026-08-31 14:14 UTC; the next is not permitted before 2026-08-31 20:14 UTC under escalating backoff.",
+      "provenance": {
+        "source": "deterministic",
+        "provider": "deterministic",
+        "model": null,
+        "cache_hit": false,
+        "prompt_version": null,
+        "abstained": false,
+        "latency_ms": null,
+        "tokens": null
+      },
+      "amount_at_risk_paise": 330900,
+      "amount_recovered_paise": 0,
+      "currency": "INR",
+      "attempt_number": 1,
+      "attempts_remaining": 1,
+      "model_confidence": null,
+      "metadata": {
+        "proposed_action": "schedule_retry",
+        "decline_code": "TECHNICAL_DECLINE",
+        "decline_class": "AMBIGUOUS",
+        "corridor": "HDFC:card:rt_card_acq_2",
+        "rerouted_to": null,
+        "suppressed_retry": false,
+        "deferred_retry": true
+      }
+    },
+    {
+      "id": 3468,
+      "timestamp": "2026-09-03T03:30:00Z",
+      "batch_id": "ui-rcv-f",
+      "engine": "receivables",
+      "entity_type": "invoice",
+      "entity_id": "inv_0066",
+      "action": "block_attempt",
+      "outcome": "blocked",
+      "reason_code": "COOLDOWN_NOT_ELAPSED",
+      "authorising_rule": "policy-bounds:RL2",
+      "rationale": "Last attempt was at 2026-08-31 03:30 UTC; the next is not permitted before 2026-09-03 03:30 UTC under escalating backoff. The reasoning layer recommended 'block_attempt'; a recommendation cannot authorise what policy-bounds:RL2 forbids.",
+      "provenance": {
+        "source": "deterministic",
+        "provider": "deterministic",
+        "model": null,
+        "cache_hit": false,
+        "prompt_version": null,
+        "abstained": false,
+        "latency_ms": null,
+        "tokens": null
+      },
+      "amount_at_risk_paise": 8221500,
+      "amount_recovered_paise": 0,
+      "currency": "INR",
+      "attempt_number": 2,
+      "attempts_remaining": 2,
+      "model_confidence": null,
+      "metadata": {
+        "kind": "chase_decision",
+        "step": "defer",
+        "permitted": false,
+        "rung": null,
+        "rung_number": 2,
+        "rungs_used": 1,
+        "escalation_trigger": null,
+        "suppressed": false,
+        "suppressed_rule": null,
+        "overridden_recommendation": "block_attempt",
+        "authority_rule": "policy_engine:llm_authority.denied"
+      }
+    },
+    {
+      "id": 3481,
+      "timestamp": "2026-09-01T04:00:00Z",
+      "batch_id": "ui-rcv-f",
+      "engine": "receivables",
+      "entity_type": "invoice",
+      "entity_id": "inv_0013",
+      "action": "block_attempt",
+      "outcome": "skipped",
+      "reason_code": "ACTIVE_PROMISE",
+      "authorising_rule": "policy-bounds:PR2",
+      "rationale": "inv_0013 carries a live, unbroken promise to pay. Chasing a customer who has already committed is the behaviour that makes automated collections feel like harassment, so the invoice is deprioritised until the promise is kept or broken. The reasoning layer recommended 'block_attempt'; a recommendation cannot authorise what policy-bounds:PR2 forbids.",
+      "provenance": {
+        "source": "deterministic",
+        "provider": "deterministic",
+        "model": null,
+        "cache_hit": false,
+        "prompt_version": null,
+        "abstained": false,
+        "latency_ms": null,
+        "tokens": null
+      },
+      "amount_at_risk_paise": 0,
+      "amount_recovered_paise": 0,
+      "currency": "INR",
+      "attempt_number": 2,
+      "attempts_remaining": null,
+      "model_confidence": null,
+      "metadata": {
+        "kind": "chase_decision",
+        "step": "hold_for_promise",
+        "permitted": false,
+        "rung": null,
+        "rung_number": 2,
+        "rungs_used": 1,
+        "escalation_trigger": null,
+        "suppressed": false,
+        "suppressed_rule": null,
+        "overridden_recommendation": "block_attempt",
+        "authority_rule": "policy_engine:llm_authority.denied"
+      }
+    },
+    {
+      "id": 3480,
+      "timestamp": "2026-09-01T04:00:00Z",
+      "batch_id": "ui-rcv-f",
+      "engine": "receivables",
+      "entity_type": "invoice",
+      "entity_id": "inv_0004",
+      "action": "block_attempt",
+      "outcome": "skipped",
+      "reason_code": "ACTIVE_PROMISE",
+      "authorising_rule": "policy-bounds:PR2",
+      "rationale": "inv_0004 carries a live, unbroken promise to pay. Chasing a customer who has already committed is the behaviour that makes automated collections feel like harassment, so the invoice is deprioritised until the promise is kept or broken. The reasoning layer recommended 'block_attempt'; a recommendation cannot authorise what policy-bounds:PR2 forbids.",
+      "provenance": {
+        "source": "deterministic",
+        "provider": "deterministic",
+        "model": null,
+        "cache_hit": false,
+        "prompt_version": null,
+        "abstained": false,
+        "latency_ms": null,
+        "tokens": null
+      },
+      "amount_at_risk_paise": 0,
+      "amount_recovered_paise": 0,
+      "currency": "INR",
+      "attempt_number": 2,
+      "attempts_remaining": null,
+      "model_confidence": null,
+      "metadata": {
+        "kind": "chase_decision",
+        "step": "hold_for_promise",
+        "permitted": false,
+        "rung": null,
+        "rung_number": 2,
+        "rungs_used": 1,
+        "escalation_trigger": null,
+        "suppressed": false,
+        "suppressed_rule": null,
+        "overridden_recommendation": "block_attempt",
+        "authority_rule": "policy_engine:llm_authority.denied"
+      }
+    }
+  ]
+}

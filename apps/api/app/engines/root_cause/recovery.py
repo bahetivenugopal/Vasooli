@@ -425,6 +425,13 @@ class RecoveryService:
             engine=Engine.ROOT_CAUSE,
             entity_type=EntityType.PAYMENT,
             entity_id=attempt.attempt_id,
+            # Deliberately *not* stamped with the run clock, unlike Engines 2 and
+            # 3. This engine writes its `schedule_retry` decision entries at
+            # wall-clock time, so a run-clock `api_call` would land months before
+            # the decision that authorised it and every retried payment's timeline
+            # would go out of order. Engine 1's timestamps are wrong *together*,
+            # which keeps them ordered; making them right means moving the
+            # decision entries too, which is a larger change than this one.
         )
         return attempt.amount_paise if result.ok and outcome.succeeded else 0
 

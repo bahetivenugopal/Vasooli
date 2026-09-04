@@ -743,3 +743,148 @@ the mode is on every `api_call` entry), no message ever dispatched to anyone, no
 multi-reply conversation modelling, and no second reasoning task for reminder
 drafting. Engine 2's `record_call` timestamp defect was left in place rather than
 fixed out of scope. Commits were left to the user.
+
+---
+
+## Phase 6 — The Control Tower Dashboard
+
+**Status:** complete · **Date:** 2026-09-04
+**Verified by:** 546 pytest passing (14 new), `ruff check` clean from the repo
+root *and* from `apps/api/`, `npm run check` clean (Prettier, ESLint, 24 Vitest
+tests, production build), all eight routes rendering against live seed-42 runs,
+the audit-check validations passing with **0 violations over 348 entries**, and
+the smoke checklist walked end to end — including the empty-database and
+API-down paths, which is where three of this phase's real defects were found.
+
+### What now exists
+
+`apps/web/` — the control tower, in four surfaces:
+
+- `app/page.tsx` — the overview: headline, per-engine contributions, trust strip,
+  cross-engine recent activity, three run triggers
+- `app/engines/{root-cause,mandate-recovery,receivables}/page.tsx`
+- `app/timelines/{corridor,mandate,invoice}/...` — the narrative surfaces
+- `app/audit/page.tsx` — the filterable trail, with the denials-only preset
+
+Plus nine shadcn primitives in `components/ui/`, eleven composed components in
+`components/features/`, `lib/money.ts` (**the** money formatter), `lib/api.ts`
+(the typed client), `hooks/use-api.ts`, and `packages/shared-types/` generated
+from the API's own OpenAPI schema by `scripts/generate_api_types.py`.
+
+On the backend: `services/overview.py` + `models/overview.py` + a new
+`/api/v1/overview` route, `core/repo_path.py`, `GET /{engine}/runs/{id}/summary`
+on all three engines, and `test_api_overview.py`.
+
+Also: `docs/smoke-checklist.md`, and fifteen screenshots in
+`docs/pitch/screenshots/` with an index — including the empty states, the
+failure state and the run trigger, because a gallery of successes is the
+cherry-picking the competition's bar warns against.
+
+### The rule that drove every design decision here
+
+**The dashboard never computes a metric.** Everything rendered was recomputed
+from the audit trail by the API. That single constraint is what forced both API
+additions below — the browser adding three numbers together would have made it a
+second place metrics are computed, and a second place is where the first
+disagreement starts.
+
+### Deviations from the phase file, and why
+
+| # | Deviation | Why it happened |
+| --- | --- | --- |
+| 1 | **A new endpoint, `GET /api/v1/overview`, and a fifth module in `services/`** | §5.2 requires a headline "aggregated across all three engines" and §5.6 forbids client-side metric computation. Nothing in the API answered the first, so the only way to satisfy both was to sum server-side. It lives in the shared core rather than an engine because it is cross-engine by definition. It ships each engine's own recovery definition on its contribution row, and the reason the blended rate is a breadth figure — the caveats travel with the number rather than living in a doc nobody opens on camera. |
+| 2 | **Each engine's `RunSummary` is now persisted and served** | §5.3 asks each engine view for splits — recovery by failure class, the AFA branch, per-ageing-bucket recovery, detection scoring — that **cannot be recomputed from the audit entries alone**: they need the run's own outcomes and the dataset. They existed only in the `POST /runs` response, which nothing stored. Each runner now writes `notes["run_summary"]` and a `GET /runs/{id}/summary` serves it, following the precedent Engine 3 set with `notes["extraction"]`. The money figures inside were read off the trail, and `/audit/batches/{id}/summary` recomputes those independently — which is what makes the stored copy checkable rather than merely convenient. |
+| 3 | **`POST /runs` had never worked through the API, for any engine** | All three engines lazily import `data.generators.retry_model` from the repo root. The demo scripts bootstrap `sys.path`; pytest supplies it for free via rootdir. **Uvicorn does neither**, so every `POST /runs` died with `ModuleNotFoundError: No module named 'data'` — a route that passed its tests and had never once been called for real. The dashboard's run trigger was the first thing to call it. Fixed with `core/repo_path.py`, invoked from the lifespan, plus a regression test that asserts the import works *from inside the app's lifespan* — because the failure is invisible to every other test in the suite. |
+| 4 | **Engine 2's `record_call` timestamp defect fixed; Engine 1's deliberately not** | Phase 5 recorded this as "one keyword argument from fixed". For Engine 2 that was true, and it is fixed: its `attempt_charge` entries already carry the scheduled debit time, so the `api_call` now matches instead of jumping to wall-clock. For Engine 1 it was **not** true — its `schedule_retry` entries are themselves wall-clock, so a run-clock `api_call` landed *before* the decision authorising it and put 41 payment timelines out of order. Reverted, with the reasoning in a comment at the call site. Engine 1's timestamps are wrong *together*, which keeps them ordered; making them right means moving its decision entries too. |
+| 5 | **`recent_activity` is per-engine, not simply newest-first** | A plain sort does not do what it looks like. The three engines do not share a clock — Engine 1 stamps wall-clock, Engine 2 each debit's scheduled time, Engine 3 its run clock — so "the newest entries across three batches" resolved to "every entry belongs to whichever engine ran last", and the front page silently became a single-engine view. The field now takes a share per engine and orders those. The underlying clock inconsistency is not hidden by this; it is just not allowed to make the front page misleading. Pinned by a test. |
+| 6 | **The overview's contribution chart shows recovery *rates*, not rupees** | The engines' absolute figures span three orders of magnitude (Rs 13,362 against Rs 92.94 lakh), so a grouped money chart renders two engines as a flat line. A log axis was tried and is worse — six bars of near-identical height *implies* the engines are comparable in size when the entire point is that they are not. Rates are comparable, so rates are what gets charted, with the absolute rupees on the cards immediately above where the scale difference is legible as text. |
+| 7 | **Long tables preview 25 rows with an explicit "show all"** | Not asked for. The mandate page rendered all 64 mandates at 19,000px tall, which broke full-page capture and buried the metrics above the fold. The count of what is hidden is always stated — a silently truncated list is a list somebody will quote the length of. |
+| 8 | **Charts do not animate** | Recharts restarts its entry animation whenever `ResponsiveContainer` resizes. A full-page screenshot resizes the viewport, which produced charts with correct axes and **no bars at all** — and the same happens when a window is resized mid-demo. |
+| 9 | **`127.0.0.1` replaces `localhost` as the default API host** | Uvicorn binds IPv4 loopback by default while some browsers resolve `localhost` to `::1` first, which makes every page render its error state against a perfectly healthy API. `CORS_ORIGINS` now lists both origins for the same reason. |
+| 10 | **Types are generated by a ~200-line Python script, not `openapi-typescript`** | §5.6 requires types from the OpenAPI schema. The npm tool would work and would add a Node toolchain dependency to a Python repo for 42 flat models. The script runs from the same interpreter the API does, needs no install, and formats its output with Prettier. If the schema grows shapes it cannot express, swap it out rather than bolting cases on. |
+| 11 | **No Radix for tabs or selects** | The scaffold ships only `react-slot`. Tabs are headless (with the arrow-key pattern) and the select is a styled native `<select>`. Both open instantly, work at any window size, and cannot get stuck in a portal — which is the failure mode that matters when the thing is being recorded. |
+
+### Things a later phase will otherwise get wrong
+
+**`npm run check` does not cover the routes.** It runs Prettier, ESLint, Vitest
+and the production build — and the build **type-checked three pages that 500 on
+every request**, because Next 14 passes `params` as a plain object and they were
+typed as a `Promise` (the Next 15 shape). TypeScript believed the declaration.
+The only thing that caught it was loading the pages. `docs/smoke-checklist.md`
+exists for exactly this class of failure and is not optional before recording.
+
+**Never run Prettier from the repo root.** It is configured in `apps/web/` and
+scoped there. Run from the root it reformatted the versioned prompt files, the
+committed data manifests, the skills and every ADR — cosmetic, but a prompt file
+is part of the LLM cache key and a manifest is a reproducibility artefact. All of
+it was reverted; the lesson is to `cd apps/web` first, always.
+
+**A `fetch` rejection means "down" *or* "CORS refused", and the browser says
+neither.** Diagnosing that cost real time this phase: the API was healthy and the
+page was served from an origin `CORS_ORIGINS` did not list. `lib/api.ts` now
+names both causes and the page's own origin in the error it renders.
+
+**The screenshot script refuses to save a page that rendered an error state.**
+Its first run quietly produced eight plausible-looking pictures of the "could not
+reach the API" panel. Guards on capture tooling are cheap; noticing later is not.
+
+**Money formatting has exactly one home, and the test caught the author.**
+`lib/money.ts` is the only place paise become rupees. Writing its test, the
+expected value for Engine 3's Rs 2,28,27,113 was typed a hundred times too large
+— which is the precise bug the file exists to prevent, caught by the file's own
+test on its first run.
+
+**Two things are called a summary on an engine route.**
+`/audit/batches/{id}/summary` is recomputed from the entries and is what to quote
+for a headline. `/{engine}/runs/{id}/summary` is the engine's own stored
+`RunSummary` and is what to quote for a breakdown. They agree on money by
+construction; do not merge them.
+
+### What the API made awkward — signal for Phase 7
+
+The phase file asks for this explicitly.
+
+1. **Three read models store `provenance` in a JSON column**, so the generated
+   TypeScript for `CorridorDetectionRead`, `PromiseToPayRead` and the two
+   communication models is `Record<string, unknown>`. The dashboard narrows it in
+   `provenance-badge.tsx`. Typing those columns as `Provenance` on the Python
+   side would delete that shim and validate the shape on the way out, as
+   `AuditEntryRead` already does.
+2. **Engine 3 records reply understanding as `action: classify_decline`.** On an
+   invoice timeline that renders as "Classify decline" above a customer's
+   sentence about paying an invoice. The action vocabulary has no value for
+   reading a message; adding one touches the `audit-schema` skill, which is why
+   it was not done here.
+3. **`InvoiceTimeline.replies` is `list[dict[str, Any]]`**, so the one part of
+   the demo's most important surface that a viewer reads most closely is the one
+   part with no schema. A small `ReplyRead` model would fix it.
+4. **The run clock problem is now visible, not just documented.** Phase 5 noted
+   that all three engines derive `now` differently and are each right for their
+   own data. The consequence only became concrete when a cross-engine activity
+   feed sorted by timestamp and silently showed one engine. Deviation #5 works
+   around it; the fix is for engines to stamp *every* entry with their run clock,
+   as Engine 3 already does.
+5. **`BatchRun.notes` has become a grab-bag.** It now carries the dataset id, the
+   dataset path, the run clock, a config version, the Razorpay mode, whether the
+   provider was enabled, the extraction score and the whole `RunSummary`. It
+   works, and it is untyped.
+
+### Measured, and what the dashboard now shows
+
+Headline across the three seed-42 runs (`ui-rc-f`, `ui-mr-f`, `ui-rcv-f`):
+**Rs 94.90 L recovered of Rs 2.41 Cr at risk, 39.31%**, over 348 audited
+decisions with **0 schema violations**. The trust strip: 95 policy denials, 40
+compliance-blocked, 28 retries suppressed, 8 messages suppressed, 38 human
+escalations, 1 deterministic fallback, 1 abstention.
+
+That blended rate is a **breadth** figure and the dashboard says so on screen —
+the three engines measure exposure differently, and each contribution row carries
+its own definition. Quote `docs/metrics/engine-*.md` for anything per-engine.
+
+### Not done in this phase (deliberately)
+
+No authentication, no multi-tenancy, no websockets (the run trigger is a
+synchronous POST with an elapsed counter, which is more reliable to demo), no
+mobile-responsive polish beyond "does not break", no deployment. Engine 1's
+wall-clock audit timestamps were left as they are (deviation #4). The receivables
+`InvoiceTimeline.replies` shape was left untyped. Commits were left to the user.

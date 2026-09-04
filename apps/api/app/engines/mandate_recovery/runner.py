@@ -58,6 +58,18 @@ from app.services.llm_agent import REGISTRY, LLMAgent
 from app.services.policy_engine import PolicyEngine
 from app.services.razorpay_client import RazorpayClient
 
+#: What Engine 2's *addressable* denominator means. A module constant rather
+#: than an inline string, because the cross-engine overview quotes it too, and a
+#: caveat with two copies is a caveat that goes stale in one of them.
+ADDRESSABLE_DEFINITION = (
+    "amount at risk on mandates whose next step the policy engine "
+    "permitted to be a debit this cycle (attempted, or deferred on "
+    "spacing). Excludes every mandate a compliance gate, a hard "
+    "decline or a hard stop refused — money no compliant system may "
+    "collect automatically. Reported beside the headline rate, not "
+    "instead of it."
+)
+
 
 @dataclass
 class RunArtefacts:
@@ -168,7 +180,17 @@ class MandateRunner:
             mandates=mandates,
             outcomes=outcomes,
         )
-        self._trail.complete_batch(batch_id, status=BatchStatus.COMPLETED)
+        run = self._trail.complete_batch(batch_id, status=BatchStatus.COMPLETED)
+        # The engine's own summary, persisted beside the dataset id that produced
+        # it. Unlike the audit trail's `batch_summary()`, this one cannot be
+        # recomputed from the entries alone — the per-class and per-branch splits
+        # need the run's outcomes and the dataset behind them — so the dashboard
+        # can only show it if the run stores it. The money figures inside it were
+        # themselves read off the trail at the end of the run, and
+        # `/audit/batches/{id}/summary` recomputes those independently, which is
+        # what makes the stored copy checkable rather than merely convenient.
+        run.notes = {**(run.notes or {}), "run_summary": summary.model_dump(mode="json")}
+        self._db.commit()
         return RunArtefacts(summary=summary, outcomes=outcomes, schedules=schedules)
 
     # --- one mandate -------------------------------------------------------
@@ -274,14 +296,7 @@ class MandateRunner:
             addressable_recovery_rate=(
                 round(base.amount_recovered_paise / addressable, 4) if addressable else 0.0
             ),
-            addressable_definition=(
-                "amount at risk on mandates whose next step the policy engine "
-                "permitted to be a debit this cycle (attempted, or deferred on "
-                "spacing). Excludes every mandate a compliance gate, a hard "
-                "decline or a hard stop refused — money no compliant system may "
-                "collect automatically. Reported beside the headline rate, not "
-                "instead of it."
-            ),
+            addressable_definition=ADDRESSABLE_DEFINITION,
             by_failure_class=self._by_failure_class(outcomes),
             by_route=dict(
                 Counter(o.schedule.classification.route.value for o in outcomes)

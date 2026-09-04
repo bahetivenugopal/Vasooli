@@ -1,0 +1,5580 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Vasooli API",
+    "description": "AI-first revenue recovery — one policy layer, one audit trail, three engines.",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/v1/health": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Health",
+        "description": "Liveness probe.",
+        "operationId": "health_api_v1_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/audit/entries": {
+      "get": {
+        "tags": [
+          "audit"
+        ],
+        "summary": "List Entries",
+        "description": "List audit entries, newest first.",
+        "operationId": "list_entries_api_v1_audit_entries_get",
+        "parameters": [
+          {
+            "name": "batch_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Batch Id"
+            }
+          },
+          {
+            "name": "engine",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Engine"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Engine"
+            }
+          },
+          {
+            "name": "entity_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/EntityType"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Entity Type"
+            }
+          },
+          {
+            "name": "entity_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Entity Id"
+            }
+          },
+          {
+            "name": "action",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Action"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Action"
+            }
+          },
+          {
+            "name": "outcome",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Outcome"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Outcome"
+            }
+          },
+          {
+            "name": "source",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/ProvenanceSource"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by provenance: was this judgment reasoned or ruled?",
+              "title": "Source"
+            },
+            "description": "Filter by provenance: was this judgment reasoned or ruled?"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 1000,
+              "minimum": 1,
+              "default": 100,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AuditEntryRead"
+                  },
+                  "title": "Response List Entries Api V1 Audit Entries Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/audit/entries/{entry_id}": {
+      "get": {
+        "tags": [
+          "audit"
+        ],
+        "summary": "Get Entry",
+        "description": "One entry with its full reasoning, citation and provenance.",
+        "operationId": "get_entry_api_v1_audit_entries__entry_id__get",
+        "parameters": [
+          {
+            "name": "entry_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Entry Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditEntryRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/audit/batches": {
+      "get": {
+        "tags": [
+          "audit"
+        ],
+        "summary": "List Batches",
+        "description": "Every batch run, newest first. Each carries its seed.",
+        "operationId": "list_batches_api_v1_audit_batches_get",
+        "parameters": [
+          {
+            "name": "engine",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Engine"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Engine"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BatchRunRead"
+                  },
+                  "title": "Response List Batches Api V1 Audit Batches Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/audit/batches/{batch_id}/summary": {
+      "get": {
+        "tags": [
+          "audit"
+        ],
+        "summary": "Batch Summary",
+        "description": "The headline metrics for one batch, recomputed from its entries.\n\nRecomputed rather than read from the batch's stored snapshot, so the number\nreported here and the trail behind it cannot disagree.",
+        "operationId": "batch_summary_api_v1_audit_batches__batch_id__summary_get",
+        "parameters": [
+          {
+            "name": "batch_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Batch Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchSummary"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/audit/entities/{entity_type}/{entity_id}/timeline": {
+      "get": {
+        "tags": [
+          "audit"
+        ],
+        "summary": "Entity Timeline",
+        "description": "Every decision about one entity, oldest first.",
+        "operationId": "entity_timeline_api_v1_audit_entities__entity_type___entity_id__timeline_get",
+        "parameters": [
+          {
+            "name": "entity_type",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/EntityType"
+            }
+          },
+          {
+            "name": "entity_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Entity Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AuditEntryRead"
+                  },
+                  "title": "Response Entity Timeline Api V1 Audit Entities  Entity Type   Entity Id  Timeline Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/audit/rules": {
+      "get": {
+        "tags": [
+          "audit"
+        ],
+        "summary": "List Rules",
+        "description": "Every rule the policy engine can cite.\n\nExposed because \"every rule has a description and a traceable source\" should\nbe checkable by anyone reading the API, not just by anyone reading the code.",
+        "operationId": "list_rules_api_v1_audit_rules_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PolicyRuleRead"
+                  },
+                  "type": "array",
+                  "title": "Response List Rules Api V1 Audit Rules Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/overview": {
+      "get": {
+        "tags": [
+          "overview"
+        ],
+        "summary": "Get Overview",
+        "description": "The headline across all three engines, recomputed from the audit trail.\n\nEach engine's contribution carries its own definition of what \"recovered\"\nmeans for it, and the blended figure carries the reason it is a breadth\nnumber rather than a like-for-like one. Neither is optional: this is the\nscreen a judge reads first, and it is the easiest place in the project to\nimply more than the runs demonstrate.",
+        "operationId": "get_overview_api_v1_overview_get",
+        "parameters": [
+          {
+            "name": "root_cause",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Root-cause run to report. Defaults to the latest completed.",
+              "title": "Root Cause"
+            },
+            "description": "Root-cause run to report. Defaults to the latest completed."
+          },
+          {
+            "name": "mandate_recovery",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Mandate run to report. Defaults to the latest completed.",
+              "title": "Mandate Recovery"
+            },
+            "description": "Mandate run to report. Defaults to the latest completed."
+          },
+          {
+            "name": "receivables",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Receivables run to report. Defaults to the latest completed.",
+              "title": "Receivables"
+            },
+            "description": "Receivables run to report. Defaults to the latest completed."
+          },
+          {
+            "name": "recent_limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 12,
+              "title": "Recent Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OverviewSummary"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/root-cause/runs": {
+      "post": {
+        "tags": [
+          "root-cause"
+        ],
+        "summary": "Trigger Run",
+        "description": "Run the full loop over a payments batch and return the honest summary.",
+        "operationId": "trigger_run_api_v1_root_cause_runs_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/app__api__v1__routes__root_cause__RunRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__engines__root_cause__schemas__RunSummary"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "root-cause"
+        ],
+        "summary": "List Runs",
+        "description": "Every root-cause run, newest first. Each carries its seed.",
+        "operationId": "list_runs_api_v1_root_cause_runs_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BatchRunRead"
+                  },
+                  "title": "Response List Runs Api V1 Root Cause Runs Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/root-cause/runs/{batch_id}": {
+      "get": {
+        "tags": [
+          "root-cause"
+        ],
+        "summary": "Get Run",
+        "description": "One run's record, including the dataset batch id it consumed.",
+        "operationId": "get_run_api_v1_root_cause_runs__batch_id__get",
+        "parameters": [
+          {
+            "name": "batch_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Batch Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchRunRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/root-cause/runs/{batch_id}/summary": {
+      "get": {
+        "tags": [
+          "root-cause"
+        ],
+        "summary": "Get Run Summary",
+        "description": "The run's own summary — the engine-specific figures the dashboard reads.\n\nServed from what the run stored rather than recomputed, because the splits in\nit (per-determination diagnoses, detection scoring against the generator's\nground truth) need the run's outcomes and the dataset behind them, and nothing\nserving an API request should be re-running an engine.\n\nThe money figures inside it were read off the audit trail at the end of the\nrun, and `/audit/batches/{batch_id}/summary` recomputes those independently\n— so the stored copy is checkable against the trail rather than merely\nconvenient. Quote that route for a headline; quote this one for the breakdown.",
+        "operationId": "get_run_summary_api_v1_root_cause_runs__batch_id__summary_get",
+        "parameters": [
+          {
+            "name": "batch_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Batch Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__engines__root_cause__schemas__RunSummary"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/root-cause/runs/{batch_id}/detections": {
+      "get": {
+        "tags": [
+          "root-cause"
+        ],
+        "summary": "List Detections",
+        "description": "Every corridor detection in a run, with its diagnosis and the rule that decided it.",
+        "operationId": "list_detections_api_v1_root_cause_runs__batch_id__detections_get",
+        "parameters": [
+          {
+            "name": "batch_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Batch Id"
+            }
+          },
+          {
+            "name": "determination",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Determination"
+            }
+          },
+          {
+            "name": "allowed",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by whether the policy engine permitted the action.",
+              "title": "Allowed"
+            },
+            "description": "Filter by whether the policy engine permitted the action."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CorridorDetectionRead"
+                  },
+                  "title": "Response List Detections Api V1 Root Cause Runs  Batch Id  Detections Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/root-cause/detections/{detection_id}": {
+      "get": {
+        "tags": [
+          "root-cause"
+        ],
+        "summary": "Get Detection",
+        "description": "One detection with its full diagnosis, reasoning and provenance.",
+        "operationId": "get_detection_api_v1_root_cause_detections__detection_id__get",
+        "parameters": [
+          {
+            "name": "detection_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Detection Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CorridorDetectionRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/root-cause/runs/{batch_id}/actions": {
+      "get": {
+        "tags": [
+          "root-cause"
+        ],
+        "summary": "List Actions",
+        "description": "Every action the run took or refused, each naming its authorising rule.",
+        "operationId": "list_actions_api_v1_root_cause_runs__batch_id__actions_get",
+        "parameters": [
+          {
+            "name": "batch_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Batch Id"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 1000,
+              "minimum": 1,
+              "default": 200,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AuditEntryRead"
+                  },
+                  "title": "Response List Actions Api V1 Root Cause Runs  Batch Id  Actions Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/root-cause/runs/{batch_id}/reroutes": {
+      "get": {
+        "tags": [
+          "root-cause"
+        ],
+        "summary": "List Reroutes",
+        "description": "Reroutes the run authorised, each with the moment it lapses.",
+        "operationId": "list_reroutes_api_v1_root_cause_runs__batch_id__reroutes_get",
+        "parameters": [
+          {
+            "name": "batch_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Batch Id"
+            }
+          },
+          {
+            "name": "active_at",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Return only reroutes in force at this instant. Expiry is not advisory.",
+              "title": "Active At"
+            },
+            "description": "Return only reroutes in force at this instant. Expiry is not advisory."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CorridorRerouteRead"
+                  },
+                  "title": "Response List Reroutes Api V1 Root Cause Runs  Batch Id  Reroutes Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/root-cause/config": {
+      "get": {
+        "tags": [
+          "root-cause"
+        ],
+        "summary": "Get Config",
+        "description": "The corridor definition and thresholds this engine is running with.\n\nExposed because \"our detection thresholds are principled\" should be checkable\nby anyone reading the API, not only by anyone reading the config file. Every\nvalue names the rule in the `corridor-detection` skill that argues for it.",
+        "operationId": "get_config_api_v1_root_cause_config_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Get Config Api V1 Root Cause Config Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/mandate-recovery/runs": {
+      "post": {
+        "tags": [
+          "mandate-recovery"
+        ],
+        "summary": "Trigger Run",
+        "description": "Run the full loop over a mandate book and return the honest summary.",
+        "operationId": "trigger_run_api_v1_mandate_recovery_runs_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/app__api__v1__routes__mandate_recovery__RunRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__engines__mandate_recovery__schemas__RunSummary"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "mandate-recovery"
+        ],
+        "summary": "List Runs",
+        "description": "Every mandate-recovery run, newest first. Each carries its seed.",
+        "operationId": "list_runs_api_v1_mandate_recovery_runs_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BatchRunRead"
+                  },
+                  "title": "Response List Runs Api V1 Mandate Recovery Runs Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/mandate-recovery/runs/{batch_id}": {
+      "get": {
+        "tags": [
+          "mandate-recovery"
+        ],
+        "summary": "Get Run",
+        "description": "One run's record, including the dataset batch id it consumed.",
+        "operationId": "get_run_api_v1_mandate_recovery_runs__batch_id__get",
+        "parameters": [
+          {
+            "name": "batch_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Batch Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchRunRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/mandate-recovery/runs/{batch_id}/summary": {
+      "get": {
+        "tags": [
+          "mandate-recovery"
+        ],
+        "summary": "Get Run Summary",
+        "description": "The run's own summary — the engine-specific figures the dashboard reads.\n\nServed from what the run stored rather than recomputed, because the splits in\nit (recovery by failure class, the AFA branch, wasted attempts avoided) need\nthe run's outcomes and the dataset behind them, and nothing serving an API\nrequest should be re-running an engine.\n\nThe money figures inside it were read off the audit trail at the end of the\nrun, and `/audit/batches/{batch_id}/summary` recomputes those independently\n— so the stored copy is checkable against the trail rather than merely\nconvenient. Quote that route for a headline; quote this one for the breakdown.",
+        "operationId": "get_run_summary_api_v1_mandate_recovery_runs__batch_id__summary_get",
+        "parameters": [
+          {
+            "name": "batch_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Batch Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__engines__mandate_recovery__schemas__RunSummary"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/mandate-recovery/runs/{batch_id}/mandates": {
+      "get": {
+        "tags": [
+          "mandate-recovery"
+        ],
+        "summary": "List Mandates",
+        "description": "Every mandate in a run with its current recovery state and next step.",
+        "operationId": "list_mandates_api_v1_mandate_recovery_runs__batch_id__mandates_get",
+        "parameters": [
+          {
+            "name": "batch_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Batch Id"
+            }
+          },
+          {
+            "name": "route",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by derived failure route.",
+              "title": "Route"
+            },
+            "description": "Filter by derived failure route."
+          },
+          {
+            "name": "next_step",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by the decided next step.",
+              "title": "Next Step"
+            },
+            "description": "Filter by the decided next step."
+          },
+          {
+            "name": "afa_side",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "`above` or `at_or_below` the Rs 15,000 AFA threshold.",
+              "title": "Afa Side"
+            },
+            "description": "`above` or `at_or_below` the Rs 15,000 AFA threshold."
+          },
+          {
+            "name": "compliance_blocked",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only mandates a compliance gate refused.",
+              "title": "Compliance Blocked"
+            },
+            "description": "Only mandates a compliance gate refused."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MandateRecoveryStateRead"
+                  },
+                  "title": "Response List Mandates Api V1 Mandate Recovery Runs  Batch Id  Mandates Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/mandate-recovery/runs/{batch_id}/mandates/{mandate_id}": {
+      "get": {
+        "tags": [
+          "mandate-recovery"
+        ],
+        "summary": "Get Mandate Timeline",
+        "description": "One mandate's full timeline: every attempt, decision, rule and message.\n\nComplete on purpose. If a judge picks a mandate and asks \"why did it do that,\nand what stopped it going further?\", the answer is this one response — not a\nreconstruction from three endpoints.",
+        "operationId": "get_mandate_timeline_api_v1_mandate_recovery_runs__batch_id__mandates__mandate_id__get",
+        "parameters": [
+          {
+            "name": "batch_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Batch Id"
+            }
+          },
+          {
+            "name": "mandate_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Mandate Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MandateTimeline"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/mandate-recovery/runs/{batch_id}/communications": {
+      "get": {
+        "tags": [
+          "mandate-recovery"
+        ],
+        "summary": "List Communications",
+        "description": "Every message the run drafted. **None were sent** — see ADR 0009.",
+        "operationId": "list_communications_api_v1_mandate_recovery_runs__batch_id__communications_get",
+        "parameters": [
+          {
+            "name": "batch_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Batch Id"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "`marked_for_delivery`, `held` or `suppressed`. Never `sent`: nothing here dispatches.",
+              "title": "Status"
+            },
+            "description": "`marked_for_delivery`, `held` or `suppressed`. Never `sent`: nothing here dispatches."
+          },
+          {
+            "name": "kind",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Kind"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MandateCommunicationRead"
+                  },
+                  "title": "Response List Communications Api V1 Mandate Recovery Runs  Batch Id  Communications Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/mandate-recovery/runs/{batch_id}/actions": {
+      "get": {
+        "tags": [
+          "mandate-recovery"
+        ],
+        "summary": "List Actions",
+        "description": "Every action the run took or refused, each naming its authorising rule.",
+        "operationId": "list_actions_api_v1_mandate_recovery_runs__batch_id__actions_get",
+        "parameters": [
+          {
+            "name": "batch_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Batch Id"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 1000,
+              "minimum": 1,
+              "default": 200,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AuditEntryRead"
+                  },
+                  "title": "Response List Actions Api V1 Mandate Recovery Runs  Batch Id  Actions Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/mandate-recovery/config": {
+      "get": {
+        "tags": [
+          "mandate-recovery"
+        ],
+        "summary": "Get Config",
+        "description": "The compliance windows and bounds this engine runs with.\n\nEvery value names the rule that argues for it, and says whether that rule is\nregulatory or a Vasooli product decision. The distinction is the point: a\nreader should be able to tell at a glance which numbers we chose.",
+        "operationId": "get_config_api_v1_mandate_recovery_config_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Get Config Api V1 Mandate Recovery Config Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/receivables/runs": {
+      "post": {
+        "tags": [
+          "receivables"
+        ],
+        "summary": "Trigger Run",
+        "description": "Run the full loop over an invoice ledger and return the honest summary.",
+        "operationId": "trigger_run_api_v1_receivables_runs_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/app__api__v1__routes__receivables__RunRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__engines__receivables__schemas__RunSummary"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "receivables"
+        ],
+        "summary": "List Runs",
+        "description": "Every receivables run, newest first. Each carries its seed.",
+        "operationId": "list_runs_api_v1_receivables_runs_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BatchRunRead"
+                  },
+                  "title": "Response List Runs Api V1 Receivables Runs Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/receivables/runs/{batch_id}": {
+      "get": {
+        "tags": [
+          "receivables"
+        ],
+        "summary": "Get Run",
+        "description": "One run's record, including the dataset batch id it consumed.",
+        "operationId": "get_run_api_v1_receivables_runs__batch_id__get",
+        "parameters": [
+          {
+            "name": "batch_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Batch Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchRunRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/receivables/runs/{batch_id}/summary": {
+      "get": {
+        "tags": [
+          "receivables"
+        ],
+        "summary": "Get Run Summary",
+        "description": "The run's own summary — the engine-specific figures the dashboard reads.\n\nServed from what the run stored rather than recomputed, because the splits in\nit (per-ageing-bucket recovery, the promise register, extraction accuracy)\nneed the run's outcomes and the dataset behind them, and nothing serving an\nAPI request should be re-running an engine.\n\nThe money figures inside it were read off the audit trail at the end of the\nrun, and `/audit/batches/{batch_id}/summary` recomputes those independently\n— so the stored copy is checkable against the trail rather than merely\nconvenient. Quote that route for a headline; quote this one for the breakdown.",
+        "operationId": "get_run_summary_api_v1_receivables_runs__batch_id__summary_get",
+        "parameters": [
+          {
+            "name": "batch_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Batch Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__engines__receivables__schemas__RunSummary"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/receivables/runs/{batch_id}/extraction": {
+      "get": {
+        "tags": [
+          "receivables"
+        ],
+        "summary": "Get Extraction Score",
+        "description": "Extraction accuracy for one run, with its confusion matrix and failures.\n\nServed from the run's stored summary rather than recomputed, because the\ncomparison needs the manifest and the manifest is not something an API\nrequest should be reaching for. The numbers are the ones the run reported.",
+        "operationId": "get_extraction_score_api_v1_receivables_runs__batch_id__extraction_get",
+        "parameters": [
+          {
+            "name": "batch_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Batch Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtractionScore"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/receivables/runs/{batch_id}/worklist": {
+      "get": {
+        "tags": [
+          "receivables"
+        ],
+        "summary": "Get Worklist",
+        "description": "The ranked worklist, highest priority first, with every score breakdown.\n\nDeprioritised invoices stay on the list rather than being filtered out: \"we\nchose not to chase this, and here is the rule\" is the claim worth making, and\nfiltering would make the same decision invisible.",
+        "operationId": "get_worklist_api_v1_receivables_runs__batch_id__worklist_get",
+        "parameters": [
+          {
+            "name": "batch_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Batch Id"
+            }
+          },
+          {
+            "name": "deprioritised",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only invoices held back by a live promise (policy-bounds:PR2).",
+              "title": "Deprioritised"
+            },
+            "description": "Only invoices held back by a live promise (policy-bounds:PR2)."
+          },
+          {
+            "name": "ageing_bucket",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Ageing Bucket"
+            }
+          },
+          {
+            "name": "next_step",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Next Step"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 500,
+              "minimum": 1,
+              "default": 200,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/InvoiceChaseStateRead"
+                  },
+                  "title": "Response Get Worklist Api V1 Receivables Runs  Batch Id  Worklist Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/receivables/runs/{batch_id}/promises": {
+      "get": {
+        "tags": [
+          "receivables"
+        ],
+        "summary": "List Promises",
+        "description": "The promise register: every commitment extracted, and what became of it.",
+        "operationId": "list_promises_api_v1_receivables_runs__batch_id__promises_get",
+        "parameters": [
+          {
+            "name": "batch_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Batch Id"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "`active`, `kept`, `broken` or `superseded`.",
+              "title": "Status"
+            },
+            "description": "`active`, `kept`, `broken` or `superseded`."
+          },
+          {
+            "name": "conditional",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Conditional commitments are tracked apart from firm ones (policy-bounds:PP2).",
+              "title": "Conditional"
+            },
+            "description": "Conditional commitments are tracked apart from firm ones (policy-bounds:PP2)."
+          },
+          {
+            "name": "customer_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Customer Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PromiseToPayRead"
+                  },
+                  "title": "Response List Promises Api V1 Receivables Runs  Batch Id  Promises Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/receivables/runs/{batch_id}/invoices/{invoice_id}": {
+      "get": {
+        "tags": [
+          "receivables"
+        ],
+        "summary": "Get Invoice Timeline",
+        "description": "One invoice's full timeline: contacts, reply, reading, promise, decisions.\n\nComplete on purpose — this is the demo surface. Every rule behind every step\nis in the response, including the ones that refused.",
+        "operationId": "get_invoice_timeline_api_v1_receivables_runs__batch_id__invoices__invoice_id__get",
+        "parameters": [
+          {
+            "name": "batch_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Batch Id"
+            }
+          },
+          {
+            "name": "invoice_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Invoice Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvoiceTimeline"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/receivables/runs/{batch_id}/communications": {
+      "get": {
+        "tags": [
+          "receivables"
+        ],
+        "summary": "List Communications",
+        "description": "Every reminder the run drafted. **None were sent** — see ADR 0009.",
+        "operationId": "list_communications_api_v1_receivables_runs__batch_id__communications_get",
+        "parameters": [
+          {
+            "name": "batch_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Batch Id"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "`marked_for_delivery`, `held` or `suppressed`. Never `sent`: nothing here dispatches.",
+              "title": "Status"
+            },
+            "description": "`marked_for_delivery`, `held` or `suppressed`. Never `sent`: nothing here dispatches."
+          },
+          {
+            "name": "rung",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Rung"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/InvoiceCommunicationRead"
+                  },
+                  "title": "Response List Communications Api V1 Receivables Runs  Batch Id  Communications Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/receivables/runs/{batch_id}/actions": {
+      "get": {
+        "tags": [
+          "receivables"
+        ],
+        "summary": "List Actions",
+        "description": "Every action the run took or refused, each naming its authorising rule.",
+        "operationId": "list_actions_api_v1_receivables_runs__batch_id__actions_get",
+        "parameters": [
+          {
+            "name": "batch_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Batch Id"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 1000,
+              "minimum": 1,
+              "default": 200,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AuditEntryRead"
+                  },
+                  "title": "Response List Actions Api V1 Receivables Runs  Batch Id  Actions Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/receivables/config": {
+      "get": {
+        "tags": [
+          "receivables"
+        ],
+        "summary": "Get Config",
+        "description": "The ladder, caps and weights this engine runs with.\n\nEvery value names the rule that argues for it, and says whether the policy\nengine actually enforces it. None of these is regulatory — the receivables\nladder is entirely product judgment, which is exactly why each number has to\nbe citable.",
+        "operationId": "get_config_api_v1_receivables_config_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Get Config Api V1 Receivables Config Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/": {
+      "get": {
+        "tags": [
+          "meta"
+        ],
+        "summary": "Root",
+        "operationId": "root__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Root  Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Action": {
+        "type": "string",
+        "enum": [
+          "classify_decline",
+          "diagnose_root_cause",
+          "schedule_retry",
+          "attempt_charge",
+          "send_pre_debit_notice",
+          "reroute_traffic",
+          "send_dunning",
+          "send_reminder",
+          "record_promise_to_pay",
+          "escalate",
+          "block_attempt",
+          "halt_schedule",
+          "api_call"
+        ],
+        "title": "Action",
+        "description": "What was done, or refused. `audit-schema` -> `action` values.\n\n`block_attempt` and `halt_schedule` are the compliance-evidence actions: a\nrefusal recorded with the rule that refused it is the proof that the\nstopping rules are real, not decorative."
+      },
+      "AfaBranchBreakdown": {
+        "properties": {
+          "mandates": {
+            "type": "integer",
+            "title": "Mandates",
+            "default": 0
+          },
+          "amount_at_risk_paise": {
+            "type": "integer",
+            "title": "Amount At Risk Paise",
+            "default": 0
+          },
+          "amount_recovered_paise": {
+            "type": "integer",
+            "title": "Amount Recovered Paise",
+            "default": 0
+          },
+          "debits_attempted": {
+            "type": "integer",
+            "title": "Debits Attempted",
+            "default": 0
+          },
+          "authentication_requests": {
+            "type": "integer",
+            "title": "Authentication Requests",
+            "default": 0
+          },
+          "blocked_for_fresh_afa": {
+            "type": "integer",
+            "title": "Blocked For Fresh Afa",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "title": "AfaBranchBreakdown",
+        "description": "Both sides of the A3 threshold, so the branch is visible not asserted."
+      },
+      "AgeingBreakdown": {
+        "properties": {
+          "invoices": {
+            "type": "integer",
+            "title": "Invoices",
+            "default": 0
+          },
+          "amount_outstanding_paise": {
+            "type": "integer",
+            "title": "Amount Outstanding Paise",
+            "default": 0
+          },
+          "amount_recovered_paise": {
+            "type": "integer",
+            "title": "Amount Recovered Paise",
+            "default": 0
+          },
+          "recovery_rate": {
+            "type": "number",
+            "title": "Recovery Rate",
+            "default": 0.0
+          },
+          "reminders_sent": {
+            "type": "integer",
+            "title": "Reminders Sent",
+            "default": 0
+          },
+          "escalations": {
+            "type": "integer",
+            "title": "Escalations",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "title": "AgeingBreakdown",
+        "description": "Recovery per ageing bucket. Older buckets recover worse; say so."
+      },
+      "AuditEntryRead": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Timestamp"
+          },
+          "batch_id": {
+            "type": "string",
+            "title": "Batch Id"
+          },
+          "engine": {
+            "$ref": "#/components/schemas/Engine"
+          },
+          "entity_type": {
+            "$ref": "#/components/schemas/EntityType"
+          },
+          "entity_id": {
+            "type": "string",
+            "title": "Entity Id"
+          },
+          "action": {
+            "$ref": "#/components/schemas/Action"
+          },
+          "outcome": {
+            "$ref": "#/components/schemas/Outcome"
+          },
+          "reason_code": {
+            "type": "string",
+            "title": "Reason Code"
+          },
+          "authorising_rule": {
+            "type": "string",
+            "title": "Authorising Rule"
+          },
+          "rationale": {
+            "type": "string",
+            "title": "Rationale"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/Provenance"
+          },
+          "amount_at_risk_paise": {
+            "type": "integer",
+            "title": "Amount At Risk Paise"
+          },
+          "amount_recovered_paise": {
+            "type": "integer",
+            "title": "Amount Recovered Paise"
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency"
+          },
+          "attempt_number": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attempt Number"
+          },
+          "attempts_remaining": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attempts Remaining"
+          },
+          "model_confidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Confidence"
+          },
+          "metadata": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metadata"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "timestamp",
+          "batch_id",
+          "engine",
+          "entity_type",
+          "entity_id",
+          "action",
+          "outcome",
+          "reason_code",
+          "authorising_rule",
+          "rationale",
+          "provenance",
+          "amount_at_risk_paise",
+          "amount_recovered_paise",
+          "currency"
+        ],
+        "title": "AuditEntryRead",
+        "description": "Read shape for the API and the dashboard.\n\n`provenance` is re-validated on the way out, so a hand-edited row cannot\npresent itself as something the provenance contract would have rejected."
+      },
+      "BatchRunRead": {
+        "properties": {
+          "batch_id": {
+            "type": "string",
+            "title": "Batch Id"
+          },
+          "engine": {
+            "$ref": "#/components/schemas/Engine"
+          },
+          "seed": {
+            "type": "integer",
+            "title": "Seed"
+          },
+          "status": {
+            "$ref": "#/components/schemas/BatchStatus"
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Started At"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "batch_id",
+          "engine",
+          "seed",
+          "status",
+          "started_at"
+        ],
+        "title": "BatchRunRead"
+      },
+      "BatchStatus": {
+        "type": "string",
+        "enum": [
+          "running",
+          "completed",
+          "failed"
+        ],
+        "title": "BatchStatus",
+        "description": "Lifecycle of one reproducible batch run."
+      },
+      "BatchSummary": {
+        "properties": {
+          "batch_id": {
+            "type": "string",
+            "title": "Batch Id"
+          },
+          "entries": {
+            "type": "integer",
+            "title": "Entries"
+          },
+          "amount_at_risk_paise": {
+            "type": "integer",
+            "title": "Amount At Risk Paise"
+          },
+          "amount_recovered_paise": {
+            "type": "integer",
+            "title": "Amount Recovered Paise"
+          },
+          "recovery_rate": {
+            "type": "number",
+            "title": "Recovery Rate"
+          },
+          "action_counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Action Counts"
+          },
+          "outcome_counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Outcome Counts"
+          },
+          "engine_counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Engine Counts"
+          },
+          "by_source": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/SourceBreakdown"
+            },
+            "type": "object",
+            "title": "By Source"
+          },
+          "policy_violations": {
+            "type": "integer",
+            "title": "Policy Violations"
+          },
+          "blocked_count": {
+            "type": "integer",
+            "title": "Blocked Count"
+          },
+          "halted_count": {
+            "type": "integer",
+            "title": "Halted Count"
+          },
+          "escalated_count": {
+            "type": "integer",
+            "title": "Escalated Count"
+          },
+          "abstained_count": {
+            "type": "integer",
+            "title": "Abstained Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "batch_id",
+          "entries",
+          "amount_at_risk_paise",
+          "amount_recovered_paise",
+          "recovery_rate",
+          "action_counts",
+          "outcome_counts",
+          "engine_counts",
+          "by_source",
+          "policy_violations",
+          "blocked_count",
+          "halted_count",
+          "escalated_count",
+          "abstained_count"
+        ],
+        "title": "BatchSummary",
+        "description": "The headline number, computed honestly from the log.\n\nNever from a separately maintained counter — a counter can drift from the\ntrail it claims to summarise, and then the demo's headline figure and its\nevidence disagree."
+      },
+      "ConfusionMatrix": {
+        "properties": {
+          "true_positives": {
+            "type": "integer",
+            "title": "True Positives",
+            "default": 0
+          },
+          "false_positives": {
+            "type": "integer",
+            "title": "False Positives",
+            "default": 0
+          },
+          "true_negatives": {
+            "type": "integer",
+            "title": "True Negatives",
+            "default": 0
+          },
+          "false_negatives": {
+            "type": "integer",
+            "title": "False Negatives",
+            "default": 0
+          },
+          "precision": {
+            "type": "number",
+            "title": "Precision",
+            "default": 0.0
+          },
+          "recall": {
+            "type": "number",
+            "title": "Recall",
+            "default": 0.0
+          },
+          "f1": {
+            "type": "number",
+            "title": "F1",
+            "default": 0.0
+          },
+          "accuracy": {
+            "type": "number",
+            "title": "Accuracy",
+            "default": 0.0
+          }
+        },
+        "type": "object",
+        "title": "ConfusionMatrix",
+        "description": "A 2x2 over one binary extraction claim, plus the derived rates.\n\nReported in full rather than as headline accuracy: precision and recall move\nin opposite directions here, and which one matters depends on the claim —\na false promise suppresses a legitimate chase, a missed promise chases\nsomeone who was cooperating."
+      },
+      "CorridorDetectionRead": {
+        "properties": {
+          "detection_id": {
+            "type": "string",
+            "title": "Detection Id"
+          },
+          "batch_id": {
+            "type": "string",
+            "title": "Batch Id"
+          },
+          "corridor_key": {
+            "type": "string",
+            "title": "Corridor Key"
+          },
+          "corridor_level": {
+            "type": "string",
+            "title": "Corridor Level"
+          },
+          "issuer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Issuer"
+          },
+          "method": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Method"
+          },
+          "route_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Route Id"
+          },
+          "window_start": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Window Start"
+          },
+          "window_end": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Window End"
+          },
+          "window_attempts": {
+            "type": "integer",
+            "title": "Window Attempts"
+          },
+          "baseline_attempts": {
+            "type": "integer",
+            "title": "Baseline Attempts"
+          },
+          "observed_success_rate": {
+            "type": "number",
+            "title": "Observed Success Rate"
+          },
+          "baseline_success_rate": {
+            "type": "number",
+            "title": "Baseline Success Rate"
+          },
+          "p_value": {
+            "type": "number",
+            "title": "P Value"
+          },
+          "confidence": {
+            "type": "number",
+            "title": "Confidence"
+          },
+          "affected_attempts": {
+            "type": "integer",
+            "title": "Affected Attempts"
+          },
+          "value_at_risk_paise": {
+            "type": "integer",
+            "title": "Value At Risk Paise"
+          },
+          "decline_mix": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Decline Mix"
+          },
+          "distinct_failing_customers": {
+            "type": "integer",
+            "title": "Distinct Failing Customers"
+          },
+          "hypothesis": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hypothesis"
+          },
+          "determination": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Determination"
+          },
+          "recommended_action": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recommended Action"
+          },
+          "diagnosis_reasoning": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Diagnosis Reasoning"
+          },
+          "model_confidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Confidence"
+          },
+          "provenance": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provenance"
+          },
+          "authorised_action": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Authorised Action"
+          },
+          "authorising_rule": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Authorising Rule"
+          },
+          "policy_allowed": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Policy Allowed"
+          },
+          "overridden_recommendation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Overridden Recommendation"
+          }
+        },
+        "type": "object",
+        "required": [
+          "detection_id",
+          "batch_id",
+          "corridor_key",
+          "corridor_level",
+          "issuer",
+          "method",
+          "route_id",
+          "window_start",
+          "window_end",
+          "window_attempts",
+          "baseline_attempts",
+          "observed_success_rate",
+          "baseline_success_rate",
+          "p_value",
+          "confidence",
+          "affected_attempts",
+          "value_at_risk_paise",
+          "decline_mix",
+          "distinct_failing_customers",
+          "hypothesis",
+          "determination",
+          "recommended_action",
+          "diagnosis_reasoning",
+          "model_confidence",
+          "provenance",
+          "authorised_action",
+          "authorising_rule",
+          "policy_allowed",
+          "overridden_recommendation"
+        ],
+        "title": "CorridorDetectionRead"
+      },
+      "CorridorRerouteRead": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "batch_id": {
+            "type": "string",
+            "title": "Batch Id"
+          },
+          "detection_id": {
+            "type": "string",
+            "title": "Detection Id"
+          },
+          "corridor_key": {
+            "type": "string",
+            "title": "Corridor Key"
+          },
+          "method": {
+            "type": "string",
+            "title": "Method"
+          },
+          "from_route_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "From Route Id"
+          },
+          "to_route_id": {
+            "type": "string",
+            "title": "To Route Id"
+          },
+          "effective_from": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Effective From"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At"
+          },
+          "authorising_rule": {
+            "type": "string",
+            "title": "Authorising Rule"
+          },
+          "expiry_rule": {
+            "type": "string",
+            "title": "Expiry Rule"
+          },
+          "value_at_risk_paise": {
+            "type": "integer",
+            "title": "Value At Risk Paise"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "batch_id",
+          "detection_id",
+          "corridor_key",
+          "method",
+          "from_route_id",
+          "to_route_id",
+          "effective_from",
+          "expires_at",
+          "authorising_rule",
+          "expiry_rule",
+          "value_at_risk_paise"
+        ],
+        "title": "CorridorRerouteRead"
+      },
+      "CustomerReliability": {
+        "properties": {
+          "customer_id": {
+            "type": "string",
+            "title": "Customer Id"
+          },
+          "promises_made": {
+            "type": "integer",
+            "title": "Promises Made",
+            "default": 0
+          },
+          "kept": {
+            "type": "integer",
+            "title": "Kept",
+            "default": 0
+          },
+          "broken": {
+            "type": "integer",
+            "title": "Broken",
+            "default": 0
+          },
+          "reliability": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reliability"
+          }
+        },
+        "type": "object",
+        "required": [
+          "customer_id"
+        ],
+        "title": "CustomerReliability",
+        "description": "How often this customer's commitments hold.\n\nFeeds prioritisation on the next run and is the engine's one visible piece of\nlearning-from-behaviour. Reported as `None` rather than as a default when a\ncustomer has made no resolved promise: a customer with no history is not the\nsame as a customer with a bad one, and a default would fabricate the\ndifference."
+      },
+      "DateAccuracy": {
+        "properties": {
+          "scored": {
+            "type": "integer",
+            "title": "Scored",
+            "default": 0
+          },
+          "exact": {
+            "type": "integer",
+            "title": "Exact",
+            "default": 0
+          },
+          "within_one_day": {
+            "type": "integer",
+            "title": "Within One Day",
+            "default": 0
+          },
+          "wrong": {
+            "type": "integer",
+            "title": "Wrong",
+            "default": 0
+          },
+          "missing": {
+            "type": "integer",
+            "title": "Missing",
+            "default": 0
+          },
+          "spurious": {
+            "type": "integer",
+            "title": "Spurious",
+            "default": 0
+          },
+          "exact_rate": {
+            "type": "number",
+            "title": "Exact Rate",
+            "default": 0.0
+          },
+          "by_difficulty": {
+            "additionalProperties": {
+              "additionalProperties": {
+                "type": "integer"
+              },
+              "type": "object"
+            },
+            "type": "object",
+            "title": "By Difficulty"
+          }
+        },
+        "type": "object",
+        "title": "DateAccuracy",
+        "description": "How well extracted dates match the ground truth, split by difficulty.\n\n`explicit` dates are stated in the text in one of several everyday formats;\n`inferable` ones need an anchor (\"end of the month\") resolved against the\nreply's own timestamp. Scoring them together would hide which half the engine\nis actually good at."
+      },
+      "DetectionScore": {
+        "properties": {
+          "true_positives": {
+            "type": "integer",
+            "title": "True Positives"
+          },
+          "false_positives": {
+            "type": "integer",
+            "title": "False Positives"
+          },
+          "false_negatives": {
+            "type": "integer",
+            "title": "False Negatives"
+          },
+          "precision": {
+            "type": "number",
+            "title": "Precision"
+          },
+          "recall": {
+            "type": "number",
+            "title": "Recall"
+          },
+          "detection_latency_hours": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Detection Latency Hours"
+          },
+          "matched": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Matched"
+          },
+          "unmatched_detections": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Unmatched Detections"
+          },
+          "missed_degradations": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Missed Degradations"
+          },
+          "decoy_false_positives": {
+            "type": "integer",
+            "title": "Decoy False Positives"
+          },
+          "ground_truth_source": {
+            "type": "string",
+            "title": "Ground Truth Source"
+          }
+        },
+        "type": "object",
+        "required": [
+          "true_positives",
+          "false_positives",
+          "false_negatives",
+          "precision",
+          "recall",
+          "detection_latency_hours",
+          "matched",
+          "unmatched_detections",
+          "missed_degradations",
+          "decoy_false_positives",
+          "ground_truth_source"
+        ],
+        "title": "DetectionScore",
+        "description": "Detection performance against the generator's ground truth.\n\nComputed by `scoring.py`, which is evaluation code and may read the manifest.\nThe detector may not, and does not."
+      },
+      "Engine": {
+        "type": "string",
+        "enum": [
+          "root_cause",
+          "mandate_recovery",
+          "receivables",
+          "core"
+        ],
+        "title": "Engine",
+        "description": "Which engine acted. Mirrors `apps/api/app/engines/<name>/`."
+      },
+      "EngineContribution": {
+        "properties": {
+          "engine": {
+            "$ref": "#/components/schemas/Engine"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "batch_id": {
+            "type": "string",
+            "title": "Batch Id"
+          },
+          "seed": {
+            "type": "integer",
+            "title": "Seed"
+          },
+          "status": {
+            "$ref": "#/components/schemas/BatchStatus"
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Started At"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "dataset_batch_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset Batch Id"
+          },
+          "entries": {
+            "type": "integer",
+            "title": "Entries"
+          },
+          "amount_at_risk_paise": {
+            "type": "integer",
+            "title": "Amount At Risk Paise"
+          },
+          "amount_recovered_paise": {
+            "type": "integer",
+            "title": "Amount Recovered Paise"
+          },
+          "recovery_rate": {
+            "type": "number",
+            "title": "Recovery Rate"
+          },
+          "by_source": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/SourceBreakdown"
+            },
+            "type": "object",
+            "title": "By Source"
+          },
+          "recovery_definition": {
+            "type": "string",
+            "title": "Recovery Definition"
+          }
+        },
+        "type": "object",
+        "required": [
+          "engine",
+          "label",
+          "batch_id",
+          "seed",
+          "status",
+          "started_at",
+          "entries",
+          "amount_at_risk_paise",
+          "amount_recovered_paise",
+          "recovery_rate",
+          "by_source",
+          "recovery_definition"
+        ],
+        "title": "EngineContribution",
+        "description": "One engine's share of the headline, and the run it came from.\n\nCarries the run's `batch_id` and `seed` because a reported number that cannot\nbe traced back to a reproducible run is not evidence."
+      },
+      "EntityType": {
+        "type": "string",
+        "enum": [
+          "payment",
+          "mandate",
+          "invoice",
+          "corridor",
+          "batch"
+        ],
+        "title": "EntityType",
+        "description": "What was acted on. `audit-schema` -> Required fields."
+      },
+      "ExtractionScore": {
+        "properties": {
+          "ground_truth_source": {
+            "type": "string",
+            "title": "Ground Truth Source"
+          },
+          "replies_total": {
+            "type": "integer",
+            "title": "Replies Total",
+            "default": 0
+          },
+          "replies_scored": {
+            "type": "integer",
+            "title": "Replies Scored",
+            "default": 0
+          },
+          "abstentions": {
+            "type": "integer",
+            "title": "Abstentions",
+            "default": 0
+          },
+          "abstention_rate": {
+            "type": "number",
+            "title": "Abstention Rate",
+            "default": 0.0
+          },
+          "promise_detection": {
+            "$ref": "#/components/schemas/ConfusionMatrix"
+          },
+          "dispute_detection": {
+            "$ref": "#/components/schemas/ConfusionMatrix"
+          },
+          "conditional_detection": {
+            "$ref": "#/components/schemas/ConfusionMatrix"
+          },
+          "date_accuracy": {
+            "$ref": "#/components/schemas/DateAccuracy"
+          },
+          "intent_confusion": {
+            "additionalProperties": {
+              "additionalProperties": {
+                "type": "integer"
+              },
+              "type": "object"
+            },
+            "type": "object",
+            "title": "Intent Confusion"
+          },
+          "by_language": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ConfusionMatrix"
+            },
+            "type": "object",
+            "title": "By Language"
+          },
+          "failures": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Failures"
+          },
+          "scoring_note": {
+            "type": "string",
+            "title": "Scoring Note",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "ground_truth_source"
+        ],
+        "title": "ExtractionScore",
+        "description": "Extraction accuracy against Phase 2's held-out annotations.\n\nEvery rate here is computed **over model-handled replies only**, with\nabstentions reported separately and never folded in. Blending them would\nimply the model answered when it explicitly did not, which is the one thing\nan abstention path must never be allowed to do to a metric."
+      },
+      "FailureClassBreakdown": {
+        "properties": {
+          "mandates": {
+            "type": "integer",
+            "title": "Mandates",
+            "default": 0
+          },
+          "amount_at_risk_paise": {
+            "type": "integer",
+            "title": "Amount At Risk Paise",
+            "default": 0
+          },
+          "amount_recovered_paise": {
+            "type": "integer",
+            "title": "Amount Recovered Paise",
+            "default": 0
+          },
+          "recovery_rate": {
+            "type": "number",
+            "title": "Recovery Rate",
+            "default": 0.0
+          },
+          "debits_attempted": {
+            "type": "integer",
+            "title": "Debits Attempted",
+            "default": 0
+          },
+          "debits_recovered": {
+            "type": "integer",
+            "title": "Debits Recovered",
+            "default": 0
+          },
+          "retries_suppressed": {
+            "type": "integer",
+            "title": "Retries Suppressed",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "title": "FailureClassBreakdown",
+        "description": "Recovery, per failure class. Where the story lives.\n\nSoft declines recover at a very different rate from hard ones, and a single\nblended rate hides exactly the fact that makes the engine worth building."
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HealthResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "service": {
+            "type": "string",
+            "title": "Service"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "environment": {
+            "type": "string",
+            "title": "Environment"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "service",
+          "version",
+          "environment"
+        ],
+        "title": "HealthResponse"
+      },
+      "InvoiceChaseStateRead": {
+        "properties": {
+          "batch_id": {
+            "type": "string",
+            "title": "Batch Id"
+          },
+          "invoice_id": {
+            "type": "string",
+            "title": "Invoice Id"
+          },
+          "customer_id": {
+            "type": "string",
+            "title": "Customer Id"
+          },
+          "customer_name": {
+            "type": "string",
+            "title": "Customer Name"
+          },
+          "amount_paise": {
+            "type": "integer",
+            "title": "Amount Paise"
+          },
+          "amount_paid_paise": {
+            "type": "integer",
+            "title": "Amount Paid Paise"
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency"
+          },
+          "invoice_status": {
+            "type": "string",
+            "title": "Invoice Status"
+          },
+          "due_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Due At"
+          },
+          "paid_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paid At"
+          },
+          "days_overdue": {
+            "type": "integer",
+            "title": "Days Overdue"
+          },
+          "ageing_bucket": {
+            "type": "string",
+            "title": "Ageing Bucket"
+          },
+          "priority_score": {
+            "type": "number",
+            "title": "Priority Score"
+          },
+          "priority_rank": {
+            "type": "integer",
+            "title": "Priority Rank"
+          },
+          "score_breakdown": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Score Breakdown"
+          },
+          "deprioritised": {
+            "type": "boolean",
+            "title": "Deprioritised"
+          },
+          "reply_intent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reply Intent"
+          },
+          "reply_language": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reply Language"
+          },
+          "disputed": {
+            "type": "boolean",
+            "title": "Disputed"
+          },
+          "dispute_detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dispute Detail"
+          },
+          "abstained": {
+            "type": "boolean",
+            "title": "Abstained"
+          },
+          "rungs_used": {
+            "type": "integer",
+            "title": "Rungs Used"
+          },
+          "current_rung": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Rung"
+          },
+          "next_step": {
+            "type": "string",
+            "title": "Next Step"
+          },
+          "scheduled_for": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scheduled For"
+          },
+          "authorising_rule": {
+            "type": "string",
+            "title": "Authorising Rule"
+          },
+          "reason_code": {
+            "type": "string",
+            "title": "Reason Code"
+          },
+          "explanation": {
+            "type": "string",
+            "title": "Explanation"
+          },
+          "attempts_remaining": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attempts Remaining"
+          },
+          "escalated": {
+            "type": "boolean",
+            "title": "Escalated"
+          },
+          "escalation_trigger": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Escalation Trigger"
+          },
+          "reminder_sent": {
+            "type": "boolean",
+            "title": "Reminder Sent"
+          },
+          "suppressed_rule": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suppressed Rule"
+          },
+          "payment_link_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Link Id"
+          },
+          "amount_recovered_paise": {
+            "type": "integer",
+            "title": "Amount Recovered Paise"
+          },
+          "customer_reliability": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer Reliability"
+          }
+        },
+        "type": "object",
+        "required": [
+          "batch_id",
+          "invoice_id",
+          "customer_id",
+          "customer_name",
+          "amount_paise",
+          "amount_paid_paise",
+          "currency",
+          "invoice_status",
+          "due_at",
+          "paid_at",
+          "days_overdue",
+          "ageing_bucket",
+          "priority_score",
+          "priority_rank",
+          "score_breakdown",
+          "deprioritised",
+          "reply_intent",
+          "reply_language",
+          "disputed",
+          "dispute_detail",
+          "abstained",
+          "rungs_used",
+          "current_rung",
+          "next_step",
+          "scheduled_for",
+          "authorising_rule",
+          "reason_code",
+          "explanation",
+          "attempts_remaining",
+          "escalated",
+          "escalation_trigger",
+          "reminder_sent",
+          "suppressed_rule",
+          "payment_link_id",
+          "amount_recovered_paise",
+          "customer_reliability"
+        ],
+        "title": "InvoiceChaseStateRead"
+      },
+      "InvoiceCommunicationRead": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "batch_id": {
+            "type": "string",
+            "title": "Batch Id"
+          },
+          "invoice_id": {
+            "type": "string",
+            "title": "Invoice Id"
+          },
+          "customer_id": {
+            "type": "string",
+            "title": "Customer Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "rung": {
+            "type": "string",
+            "title": "Rung"
+          },
+          "rung_number": {
+            "type": "integer",
+            "title": "Rung Number"
+          },
+          "channel": {
+            "type": "string",
+            "title": "Channel"
+          },
+          "subject": {
+            "type": "string",
+            "title": "Subject"
+          },
+          "body": {
+            "type": "string",
+            "title": "Body"
+          },
+          "call_to_action": {
+            "type": "string",
+            "title": "Call To Action"
+          },
+          "payment_link_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Link Url"
+          },
+          "payment_link_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Link Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "scheduled_for": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scheduled For"
+          },
+          "authorising_rule": {
+            "type": "string",
+            "title": "Authorising Rule"
+          },
+          "held_rule": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Held Rule"
+          },
+          "rationale": {
+            "type": "string",
+            "title": "Rationale"
+          },
+          "provenance": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Provenance"
+          },
+          "tone_violations": {
+            "anyOf": [
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tone Violations"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "batch_id",
+          "invoice_id",
+          "customer_id",
+          "created_at",
+          "rung",
+          "rung_number",
+          "channel",
+          "subject",
+          "body",
+          "call_to_action",
+          "payment_link_url",
+          "payment_link_id",
+          "status",
+          "scheduled_for",
+          "authorising_rule",
+          "held_rule",
+          "rationale",
+          "provenance",
+          "tone_violations"
+        ],
+        "title": "InvoiceCommunicationRead"
+      },
+      "InvoiceTimeline": {
+        "properties": {
+          "invoice_id": {
+            "type": "string",
+            "title": "Invoice Id"
+          },
+          "batch_id": {
+            "type": "string",
+            "title": "Batch Id"
+          },
+          "state": {
+            "$ref": "#/components/schemas/InvoiceChaseStateRead"
+          },
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/AuditEntryRead"
+            },
+            "type": "array",
+            "title": "Entries"
+          },
+          "promises": {
+            "items": {
+              "$ref": "#/components/schemas/PromiseToPayRead"
+            },
+            "type": "array",
+            "title": "Promises"
+          },
+          "communications": {
+            "items": {
+              "$ref": "#/components/schemas/InvoiceCommunicationRead"
+            },
+            "type": "array",
+            "title": "Communications"
+          },
+          "replies": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Replies"
+          },
+          "next_step_summary": {
+            "type": "string",
+            "title": "Next Step Summary"
+          }
+        },
+        "type": "object",
+        "required": [
+          "invoice_id",
+          "batch_id",
+          "state",
+          "entries",
+          "promises",
+          "communications",
+          "replies",
+          "next_step_summary"
+        ],
+        "title": "InvoiceTimeline",
+        "description": "One invoice's complete story — the route the demo leans on."
+      },
+      "MandateCommunicationRead": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "batch_id": {
+            "type": "string",
+            "title": "Batch Id"
+          },
+          "mandate_id": {
+            "type": "string",
+            "title": "Mandate Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "channel": {
+            "type": "string",
+            "title": "Channel"
+          },
+          "subject": {
+            "type": "string",
+            "title": "Subject"
+          },
+          "body": {
+            "type": "string",
+            "title": "Body"
+          },
+          "call_to_action": {
+            "type": "string",
+            "title": "Call To Action"
+          },
+          "decline_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decline Code"
+          },
+          "failure_route": {
+            "type": "string",
+            "title": "Failure Route"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "scheduled_for": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scheduled For"
+          },
+          "authorising_rule": {
+            "type": "string",
+            "title": "Authorising Rule"
+          },
+          "held_rule": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Held Rule"
+          },
+          "rationale": {
+            "type": "string",
+            "title": "Rationale"
+          },
+          "model_reasoning": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Reasoning"
+          },
+          "model_confidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Confidence"
+          },
+          "provenance": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Provenance"
+          },
+          "recommended_action": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recommended Action"
+          },
+          "overridden_recommendation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Overridden Recommendation"
+          },
+          "tone_violations": {
+            "anyOf": [
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tone Violations"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "batch_id",
+          "mandate_id",
+          "created_at",
+          "kind",
+          "channel",
+          "subject",
+          "body",
+          "call_to_action",
+          "decline_code",
+          "failure_route",
+          "status",
+          "scheduled_for",
+          "authorising_rule",
+          "held_rule",
+          "rationale",
+          "model_reasoning",
+          "model_confidence",
+          "provenance",
+          "recommended_action",
+          "overridden_recommendation",
+          "tone_violations"
+        ],
+        "title": "MandateCommunicationRead"
+      },
+      "MandateRecoveryStateRead": {
+        "properties": {
+          "batch_id": {
+            "type": "string",
+            "title": "Batch Id"
+          },
+          "mandate_id": {
+            "type": "string",
+            "title": "Mandate Id"
+          },
+          "customer_id": {
+            "type": "string",
+            "title": "Customer Id"
+          },
+          "customer_name": {
+            "type": "string",
+            "title": "Customer Name"
+          },
+          "amount_paise": {
+            "type": "integer",
+            "title": "Amount Paise"
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency"
+          },
+          "frequency": {
+            "type": "string",
+            "title": "Frequency"
+          },
+          "mandate_status": {
+            "type": "string",
+            "title": "Mandate Status"
+          },
+          "mandate_cap_paise": {
+            "type": "integer",
+            "title": "Mandate Cap Paise"
+          },
+          "afa_registered": {
+            "type": "boolean",
+            "title": "Afa Registered"
+          },
+          "afa_side": {
+            "type": "string",
+            "title": "Afa Side"
+          },
+          "attempts_in_cycle": {
+            "type": "integer",
+            "title": "Attempts In Cycle"
+          },
+          "next_debit_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Next Debit At"
+          },
+          "next_debit_notice_sent_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Debit Notice Sent At"
+          },
+          "decline_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decline Code"
+          },
+          "decline_class": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decline Class"
+          },
+          "failure_route": {
+            "type": "string",
+            "title": "Failure Route"
+          },
+          "classification_rule": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Classification Rule"
+          },
+          "notice_status": {
+            "type": "string",
+            "title": "Notice Status"
+          },
+          "notice_lead_hours": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notice Lead Hours"
+          },
+          "next_step": {
+            "type": "string",
+            "title": "Next Step"
+          },
+          "scheduled_for": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scheduled For"
+          },
+          "authorising_rule": {
+            "type": "string",
+            "title": "Authorising Rule"
+          },
+          "reason_code": {
+            "type": "string",
+            "title": "Reason Code"
+          },
+          "explanation": {
+            "type": "string",
+            "title": "Explanation"
+          },
+          "attempts_remaining": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attempts Remaining"
+          },
+          "terminal": {
+            "type": "boolean",
+            "title": "Terminal"
+          },
+          "compliance_blocked": {
+            "type": "boolean",
+            "title": "Compliance Blocked"
+          },
+          "debit_attempted": {
+            "type": "boolean",
+            "title": "Debit Attempted"
+          },
+          "amount_recovered_paise": {
+            "type": "integer",
+            "title": "Amount Recovered Paise"
+          },
+          "retry_probability": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retry Probability"
+          }
+        },
+        "type": "object",
+        "required": [
+          "batch_id",
+          "mandate_id",
+          "customer_id",
+          "customer_name",
+          "amount_paise",
+          "currency",
+          "frequency",
+          "mandate_status",
+          "mandate_cap_paise",
+          "afa_registered",
+          "afa_side",
+          "attempts_in_cycle",
+          "next_debit_at",
+          "next_debit_notice_sent_at",
+          "decline_code",
+          "decline_class",
+          "failure_route",
+          "classification_rule",
+          "notice_status",
+          "notice_lead_hours",
+          "next_step",
+          "scheduled_for",
+          "authorising_rule",
+          "reason_code",
+          "explanation",
+          "attempts_remaining",
+          "terminal",
+          "compliance_blocked",
+          "debit_attempted",
+          "amount_recovered_paise",
+          "retry_probability"
+        ],
+        "title": "MandateRecoveryStateRead"
+      },
+      "MandateTimeline": {
+        "properties": {
+          "mandate_id": {
+            "type": "string",
+            "title": "Mandate Id"
+          },
+          "batch_id": {
+            "type": "string",
+            "title": "Batch Id"
+          },
+          "state": {
+            "$ref": "#/components/schemas/MandateRecoveryStateRead"
+          },
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/AuditEntryRead"
+            },
+            "type": "array",
+            "title": "Entries"
+          },
+          "communications": {
+            "items": {
+              "$ref": "#/components/schemas/MandateCommunicationRead"
+            },
+            "type": "array",
+            "title": "Communications"
+          },
+          "next_step_summary": {
+            "type": "string",
+            "title": "Next Step Summary"
+          }
+        },
+        "type": "object",
+        "required": [
+          "mandate_id",
+          "batch_id",
+          "state",
+          "entries",
+          "communications",
+          "next_step_summary"
+        ],
+        "title": "MandateTimeline",
+        "description": "One mandate's complete history — the route the demo leans on."
+      },
+      "Outcome": {
+        "type": "string",
+        "enum": [
+          "success",
+          "failure",
+          "blocked",
+          "scheduled",
+          "skipped",
+          "pending",
+          "escalated",
+          "halted"
+        ],
+        "title": "Outcome",
+        "description": "How it turned out. `audit-schema` -> `outcome` values."
+      },
+      "OverviewSummary": {
+        "properties": {
+          "generated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Generated At"
+          },
+          "batch_ids": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Batch Ids"
+          },
+          "engines_reporting": {
+            "items": {
+              "$ref": "#/components/schemas/Engine"
+            },
+            "type": "array",
+            "title": "Engines Reporting"
+          },
+          "engines_missing": {
+            "items": {
+              "$ref": "#/components/schemas/Engine"
+            },
+            "type": "array",
+            "title": "Engines Missing"
+          },
+          "entries": {
+            "type": "integer",
+            "title": "Entries"
+          },
+          "amount_at_risk_paise": {
+            "type": "integer",
+            "title": "Amount At Risk Paise"
+          },
+          "amount_recovered_paise": {
+            "type": "integer",
+            "title": "Amount Recovered Paise"
+          },
+          "recovery_rate": {
+            "type": "number",
+            "title": "Recovery Rate"
+          },
+          "blended_caveat": {
+            "type": "string",
+            "title": "Blended Caveat"
+          },
+          "by_engine": {
+            "items": {
+              "$ref": "#/components/schemas/EngineContribution"
+            },
+            "type": "array",
+            "title": "By Engine"
+          },
+          "by_source": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/SourceBreakdown"
+            },
+            "type": "object",
+            "title": "By Source"
+          },
+          "trust": {
+            "items": {
+              "$ref": "#/components/schemas/TrustMetric"
+            },
+            "type": "array",
+            "title": "Trust"
+          },
+          "policy_violations": {
+            "type": "integer",
+            "title": "Policy Violations"
+          },
+          "recent_activity": {
+            "items": {
+              "$ref": "#/components/schemas/AuditEntryRead"
+            },
+            "type": "array",
+            "title": "Recent Activity"
+          }
+        },
+        "type": "object",
+        "required": [
+          "generated_at",
+          "batch_ids",
+          "engines_reporting",
+          "engines_missing",
+          "entries",
+          "amount_at_risk_paise",
+          "amount_recovered_paise",
+          "recovery_rate",
+          "blended_caveat",
+          "by_engine",
+          "by_source",
+          "trust",
+          "policy_violations",
+          "recent_activity"
+        ],
+        "title": "OverviewSummary",
+        "description": "The whole story in one response — the control tower's first screen."
+      },
+      "PolicyRuleRead": {
+        "properties": {
+          "rule_id": {
+            "type": "string",
+            "title": "Rule Id"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "source": {
+            "$ref": "#/components/schemas/RuleSource"
+          },
+          "citation": {
+            "type": "string",
+            "title": "Citation"
+          }
+        },
+        "type": "object",
+        "required": [
+          "rule_id",
+          "category",
+          "description",
+          "source",
+          "citation"
+        ],
+        "title": "PolicyRuleRead",
+        "description": "One registered rule, as the dashboard and `/audit-check` see it."
+      },
+      "PromiseToPayRead": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "batch_id": {
+            "type": "string",
+            "title": "Batch Id"
+          },
+          "invoice_id": {
+            "type": "string",
+            "title": "Invoice Id"
+          },
+          "customer_id": {
+            "type": "string",
+            "title": "Customer Id"
+          },
+          "reply_id": {
+            "type": "string",
+            "title": "Reply Id"
+          },
+          "reply_received_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Reply Received At"
+          },
+          "reply_text": {
+            "type": "string",
+            "title": "Reply Text"
+          },
+          "committed_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Committed Date"
+          },
+          "committed_amount_paise": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Committed Amount Paise"
+          },
+          "conditional": {
+            "type": "boolean",
+            "title": "Conditional"
+          },
+          "condition_detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Condition Detail"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "status_rule": {
+            "type": "string",
+            "title": "Status Rule"
+          },
+          "status_rationale": {
+            "type": "string",
+            "title": "Status Rationale"
+          },
+          "review_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review At"
+          },
+          "superseded_by": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Superseded By"
+          },
+          "model_confidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Confidence"
+          },
+          "provenance": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Provenance"
+          },
+          "model_reasoning": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Reasoning"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "batch_id",
+          "invoice_id",
+          "customer_id",
+          "reply_id",
+          "reply_received_at",
+          "reply_text",
+          "committed_date",
+          "committed_amount_paise",
+          "conditional",
+          "condition_detail",
+          "status",
+          "status_rule",
+          "status_rationale",
+          "review_at",
+          "superseded_by",
+          "model_confidence",
+          "provenance",
+          "model_reasoning"
+        ],
+        "title": "PromiseToPayRead"
+      },
+      "Provenance": {
+        "properties": {
+          "source": {
+            "$ref": "#/components/schemas/ProvenanceSource"
+          },
+          "provider": {
+            "type": "string",
+            "title": "Provider"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "cache_hit": {
+            "type": "boolean",
+            "title": "Cache Hit",
+            "default": false
+          },
+          "prompt_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prompt Version"
+          },
+          "abstained": {
+            "type": "boolean",
+            "title": "Abstained",
+            "default": false
+          },
+          "latency_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latency Ms"
+          },
+          "tokens": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tokens"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source",
+          "provider"
+        ],
+        "title": "Provenance",
+        "description": "How a judgment was produced.\n\nFrozen on purpose. Provenance describes something that already happened; a\ncaller that can edit it after the fact can misreport how a number was made."
+      },
+      "ProvenanceSource": {
+        "type": "string",
+        "enum": [
+          "model",
+          "deterministic"
+        ],
+        "title": "ProvenanceSource",
+        "description": "Was this judgment *reasoned* or *ruled*?\n\nThere is no third value. A lookup-table decision with no model involved is\n`deterministic`, because it was ruled. See `audit-schema` -> Provenance."
+      },
+      "RuleSource": {
+        "type": "string",
+        "enum": [
+          "decline-taxonomy",
+          "rbi-mandate-rules",
+          "policy-bounds",
+          "corridor-detection",
+          "product-decision"
+        ],
+        "title": "RuleSource",
+        "description": "Where a policy rule's authority comes from.\n\nEvery rule in the registry cites one of these. `PRODUCT_DECISION` is a\ndeliberate escape hatch, but it still requires a named entry in the\n`policy-bounds` skill — it is not a licence to invent a number inline."
+      },
+      "SourceBreakdown": {
+        "properties": {
+          "entries": {
+            "type": "integer",
+            "title": "Entries",
+            "default": 0
+          },
+          "amount_at_risk_paise": {
+            "type": "integer",
+            "title": "Amount At Risk Paise",
+            "default": 0
+          },
+          "amount_recovered_paise": {
+            "type": "integer",
+            "title": "Amount Recovered Paise",
+            "default": 0
+          },
+          "recovery_rate": {
+            "type": "number",
+            "title": "Recovery Rate",
+            "default": 0.0
+          }
+        },
+        "type": "object",
+        "title": "SourceBreakdown",
+        "description": "Per-source figures.\n\nMetrics are reported *per source*, never blended: a recovery rate where half\nthe decisions came from static templates is not false, but as one figure it\nimplies more than it delivers."
+      },
+      "TrustMetric": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "value": {
+            "type": "integer",
+            "title": "Value"
+          },
+          "meaning": {
+            "type": "string",
+            "title": "Meaning"
+          },
+          "by_rule": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "By Rule"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "label",
+          "value",
+          "meaning"
+        ],
+        "title": "TrustMetric",
+        "description": "One count that proves the system's bounds are real.\n\n`meaning` is part of the payload rather than dashboard copy: a refusal count\nwith no explanation of why non-zero is *good* reads as a defect list."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "app__api__v1__routes__mandate_recovery__RunRequest": {
+        "properties": {
+          "batch_id": {
+            "type": "string",
+            "title": "Batch Id",
+            "description": "Id for this engine run. Not the dataset's batch id."
+          },
+          "seed": {
+            "type": "integer",
+            "title": "Seed",
+            "default": 42
+          },
+          "dataset": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset",
+            "description": "Path to a mandates .jsonl. Defaults to the committed sample."
+          },
+          "now": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Now"
+          }
+        },
+        "type": "object",
+        "required": [
+          "batch_id"
+        ],
+        "title": "RunRequest",
+        "description": "What to run, and against what.\n\n`now` is exposed because the mandate book is anchored to a fixed `as_of` that\nis not today, and because the outreach window makes the run clock genuinely\nload-bearing: a batch executed at 03:00 IST correctly holds every customer\nmessage, which is right and looks wrong. Left unset, the runner derives the\nclock from the latest debit actually attempted in the book."
+      },
+      "app__api__v1__routes__receivables__RunRequest": {
+        "properties": {
+          "batch_id": {
+            "type": "string",
+            "title": "Batch Id",
+            "description": "Id for this engine run. Not the dataset's batch id."
+          },
+          "seed": {
+            "type": "integer",
+            "title": "Seed",
+            "default": 42
+          },
+          "dataset": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset",
+            "description": "Path to an invoices .jsonl. Defaults to the committed sample."
+          },
+          "now": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Now"
+          },
+          "score": {
+            "type": "boolean",
+            "title": "Score",
+            "description": "Compare extractions against the dataset's held-out annotations. Needs a manifest beside the .jsonl.",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "batch_id"
+        ],
+        "title": "RunRequest",
+        "description": "What to run, and against what.\n\n`now` is exposed for the same reason Engine 2 exposes it, and it bites harder\nhere: this engine is *entirely* outreach, so a batch executed outside the\n09:00-21:00 IST window correctly holds every single reminder. That is the\nrule working and it looks like a broken engine. Left unset, the runner\nderives the clock from the latest observed event in the ledger."
+      },
+      "app__api__v1__routes__root_cause__RunRequest": {
+        "properties": {
+          "batch_id": {
+            "type": "string",
+            "title": "Batch Id",
+            "description": "Id for this engine run. Not the dataset's batch id."
+          },
+          "seed": {
+            "type": "integer",
+            "title": "Seed",
+            "default": 42
+          },
+          "dataset": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset",
+            "description": "Path to a payments .jsonl. Defaults to the committed sample."
+          },
+          "now": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Now"
+          },
+          "score": {
+            "type": "boolean",
+            "title": "Score",
+            "description": "Score detections against the generator's ground truth manifest.",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "batch_id"
+        ],
+        "title": "RunRequest",
+        "description": "What to run, and against what.\n\n`now` is exposed because Phase 2's datasets are anchored to a fixed `as_of`\nthat is not today. Left unset, the runner derives it from the last attempt in\nthe dataset, which is the right default and the one the demo uses."
+      },
+      "app__engines__mandate_recovery__schemas__RunSummary": {
+        "properties": {
+          "batch_id": {
+            "type": "string",
+            "title": "Batch Id"
+          },
+          "dataset_batch_id": {
+            "type": "string",
+            "title": "Dataset Batch Id"
+          },
+          "seed": {
+            "type": "integer",
+            "title": "Seed"
+          },
+          "now": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Now"
+          },
+          "mandates_ingested": {
+            "type": "integer",
+            "title": "Mandates Ingested"
+          },
+          "mandates_with_failed_cycle": {
+            "type": "integer",
+            "title": "Mandates With Failed Cycle"
+          },
+          "amount_at_risk_paise": {
+            "type": "integer",
+            "title": "Amount At Risk Paise"
+          },
+          "amount_recovered_paise": {
+            "type": "integer",
+            "title": "Amount Recovered Paise"
+          },
+          "recovery_rate": {
+            "type": "number",
+            "title": "Recovery Rate"
+          },
+          "amount_addressable_paise": {
+            "type": "integer",
+            "title": "Amount Addressable Paise"
+          },
+          "addressable_recovery_rate": {
+            "type": "number",
+            "title": "Addressable Recovery Rate"
+          },
+          "addressable_definition": {
+            "type": "string",
+            "title": "Addressable Definition"
+          },
+          "by_failure_class": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/FailureClassBreakdown"
+            },
+            "type": "object",
+            "title": "By Failure Class"
+          },
+          "by_route": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "By Route"
+          },
+          "afa_branch": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/AfaBranchBreakdown"
+            },
+            "type": "object",
+            "title": "Afa Branch"
+          },
+          "debits_attempted": {
+            "type": "integer",
+            "title": "Debits Attempted"
+          },
+          "debits_recovered": {
+            "type": "integer",
+            "title": "Debits Recovered"
+          },
+          "retries_suppressed": {
+            "type": "integer",
+            "title": "Retries Suppressed"
+          },
+          "wasted_attempts_avoided": {
+            "type": "integer",
+            "title": "Wasted Attempts Avoided"
+          },
+          "wasted_attempts_baseline": {
+            "type": "string",
+            "title": "Wasted Attempts Baseline"
+          },
+          "compliance_blocked": {
+            "type": "integer",
+            "title": "Compliance Blocked"
+          },
+          "compliance_blocked_by_rule": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Compliance Blocked By Rule"
+          },
+          "notices_sent": {
+            "type": "integer",
+            "title": "Notices Sent"
+          },
+          "notices_scheduled": {
+            "type": "integer",
+            "title": "Notices Scheduled"
+          },
+          "notices_held": {
+            "type": "integer",
+            "title": "Notices Held"
+          },
+          "notice_status_counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Notice Status Counts"
+          },
+          "communications_drafted": {
+            "type": "integer",
+            "title": "Communications Drafted"
+          },
+          "communications_held": {
+            "type": "integer",
+            "title": "Communications Held"
+          },
+          "tone_rejections": {
+            "type": "integer",
+            "title": "Tone Rejections"
+          },
+          "mandates_at_attempt_cap": {
+            "type": "integer",
+            "title": "Mandates At Attempt Cap"
+          },
+          "mandates_halted": {
+            "type": "integer",
+            "title": "Mandates Halted"
+          },
+          "human_escalations": {
+            "type": "integer",
+            "title": "Human Escalations"
+          },
+          "action_counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Action Counts"
+          },
+          "outcome_counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Outcome Counts"
+          },
+          "policy_denials": {
+            "type": "integer",
+            "title": "Policy Denials"
+          },
+          "denials_by_rule": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Denials By Rule"
+          },
+          "llm_fallbacks": {
+            "type": "integer",
+            "title": "Llm Fallbacks"
+          },
+          "unknown_declines_classified": {
+            "type": "integer",
+            "title": "Unknown Declines Classified"
+          },
+          "provenance": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Provenance"
+          }
+        },
+        "type": "object",
+        "required": [
+          "batch_id",
+          "dataset_batch_id",
+          "seed",
+          "now",
+          "mandates_ingested",
+          "mandates_with_failed_cycle",
+          "amount_at_risk_paise",
+          "amount_recovered_paise",
+          "recovery_rate",
+          "amount_addressable_paise",
+          "addressable_recovery_rate",
+          "addressable_definition",
+          "by_failure_class",
+          "by_route",
+          "afa_branch",
+          "debits_attempted",
+          "debits_recovered",
+          "retries_suppressed",
+          "wasted_attempts_avoided",
+          "wasted_attempts_baseline",
+          "compliance_blocked",
+          "compliance_blocked_by_rule",
+          "notices_sent",
+          "notices_scheduled",
+          "notices_held",
+          "notice_status_counts",
+          "communications_drafted",
+          "communications_held",
+          "tone_rejections",
+          "mandates_at_attempt_cap",
+          "mandates_halted",
+          "human_escalations",
+          "action_counts",
+          "outcome_counts",
+          "policy_denials",
+          "denials_by_rule",
+          "llm_fallbacks",
+          "unknown_declines_classified",
+          "provenance"
+        ],
+        "title": "RunSummary",
+        "description": "The honest summary of one Engine 2 batch run.\n\nEvery money and count figure is recomputed from the audit trail by\n`runner.py`, never accumulated in a side counter that could drift from it."
+      },
+      "app__engines__receivables__schemas__RunSummary": {
+        "properties": {
+          "batch_id": {
+            "type": "string",
+            "title": "Batch Id"
+          },
+          "dataset_batch_id": {
+            "type": "string",
+            "title": "Dataset Batch Id"
+          },
+          "seed": {
+            "type": "integer",
+            "title": "Seed"
+          },
+          "now": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Now"
+          },
+          "invoices_ingested": {
+            "type": "integer",
+            "title": "Invoices Ingested"
+          },
+          "invoices_overdue": {
+            "type": "integer",
+            "title": "Invoices Overdue"
+          },
+          "invoices_worklisted": {
+            "type": "integer",
+            "title": "Invoices Worklisted"
+          },
+          "amount_outstanding_paise": {
+            "type": "integer",
+            "title": "Amount Outstanding Paise"
+          },
+          "amount_at_risk_paise": {
+            "type": "integer",
+            "title": "Amount At Risk Paise"
+          },
+          "amount_recovered_paise": {
+            "type": "integer",
+            "title": "Amount Recovered Paise"
+          },
+          "recovery_rate": {
+            "type": "number",
+            "title": "Recovery Rate"
+          },
+          "recovery_definition": {
+            "type": "string",
+            "title": "Recovery Definition"
+          },
+          "by_ageing_bucket": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/AgeingBreakdown"
+            },
+            "type": "object",
+            "title": "By Ageing Bucket"
+          },
+          "extraction": {
+            "$ref": "#/components/schemas/ExtractionScore"
+          },
+          "promises_made": {
+            "type": "integer",
+            "title": "Promises Made"
+          },
+          "promises_kept": {
+            "type": "integer",
+            "title": "Promises Kept"
+          },
+          "promises_broken": {
+            "type": "integer",
+            "title": "Promises Broken"
+          },
+          "promises_active": {
+            "type": "integer",
+            "title": "Promises Active"
+          },
+          "promises_superseded": {
+            "type": "integer",
+            "title": "Promises Superseded"
+          },
+          "promises_conditional": {
+            "type": "integer",
+            "title": "Promises Conditional"
+          },
+          "promises_undateable": {
+            "type": "integer",
+            "title": "Promises Undateable"
+          },
+          "customer_reliability": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/CustomerReliability"
+            },
+            "type": "object",
+            "title": "Customer Reliability"
+          },
+          "reminders_sent": {
+            "type": "integer",
+            "title": "Reminders Sent"
+          },
+          "reminders_held": {
+            "type": "integer",
+            "title": "Reminders Held"
+          },
+          "reminders_by_rung": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Reminders By Rung"
+          },
+          "payment_links_created": {
+            "type": "integer",
+            "title": "Payment Links Created"
+          },
+          "payment_links_failed": {
+            "type": "integer",
+            "title": "Payment Links Failed"
+          },
+          "chase_steps": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Chase Steps"
+          },
+          "escalations": {
+            "type": "integer",
+            "title": "Escalations"
+          },
+          "escalations_by_trigger": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Escalations By Trigger"
+          },
+          "disputes_frozen": {
+            "type": "integer",
+            "title": "Disputes Frozen"
+          },
+          "messages_suppressed": {
+            "type": "integer",
+            "title": "Messages Suppressed"
+          },
+          "suppressed_by_rule": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Suppressed By Rule"
+          },
+          "invoices_deprioritised": {
+            "type": "integer",
+            "title": "Invoices Deprioritised"
+          },
+          "action_counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Action Counts"
+          },
+          "outcome_counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Outcome Counts"
+          },
+          "policy_denials": {
+            "type": "integer",
+            "title": "Policy Denials"
+          },
+          "denials_by_rule": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Denials By Rule"
+          },
+          "llm_fallbacks": {
+            "type": "integer",
+            "title": "Llm Fallbacks"
+          },
+          "abstentions": {
+            "type": "integer",
+            "title": "Abstentions"
+          },
+          "provenance": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Provenance"
+          }
+        },
+        "type": "object",
+        "required": [
+          "batch_id",
+          "dataset_batch_id",
+          "seed",
+          "now",
+          "invoices_ingested",
+          "invoices_overdue",
+          "invoices_worklisted",
+          "amount_outstanding_paise",
+          "amount_at_risk_paise",
+          "amount_recovered_paise",
+          "recovery_rate",
+          "recovery_definition",
+          "by_ageing_bucket",
+          "extraction",
+          "promises_made",
+          "promises_kept",
+          "promises_broken",
+          "promises_active",
+          "promises_superseded",
+          "promises_conditional",
+          "promises_undateable",
+          "customer_reliability",
+          "reminders_sent",
+          "reminders_held",
+          "reminders_by_rung",
+          "payment_links_created",
+          "payment_links_failed",
+          "chase_steps",
+          "escalations",
+          "escalations_by_trigger",
+          "disputes_frozen",
+          "messages_suppressed",
+          "suppressed_by_rule",
+          "invoices_deprioritised",
+          "action_counts",
+          "outcome_counts",
+          "policy_denials",
+          "denials_by_rule",
+          "llm_fallbacks",
+          "abstentions",
+          "provenance"
+        ],
+        "title": "RunSummary",
+        "description": "The honest summary of one Engine 3 batch run.\n\nEvery money and count figure is recomputed from the audit trail by\n`runner.py`, never accumulated in a side counter that could drift from it."
+      },
+      "app__engines__root_cause__schemas__RunSummary": {
+        "properties": {
+          "batch_id": {
+            "type": "string",
+            "title": "Batch Id"
+          },
+          "dataset_batch_id": {
+            "type": "string",
+            "title": "Dataset Batch Id"
+          },
+          "seed": {
+            "type": "integer",
+            "title": "Seed"
+          },
+          "now": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Now"
+          },
+          "attempts_ingested": {
+            "type": "integer",
+            "title": "Attempts Ingested"
+          },
+          "failed_attempts": {
+            "type": "integer",
+            "title": "Failed Attempts"
+          },
+          "detections": {
+            "type": "integer",
+            "title": "Detections"
+          },
+          "diagnoses_by_determination": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Diagnoses By Determination"
+          },
+          "amount_at_risk_paise": {
+            "type": "integer",
+            "title": "Amount At Risk Paise"
+          },
+          "amount_recovered_paise": {
+            "type": "integer",
+            "title": "Amount Recovered Paise"
+          },
+          "recovery_rate": {
+            "type": "number",
+            "title": "Recovery Rate"
+          },
+          "action_counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Action Counts"
+          },
+          "outcome_counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Outcome Counts"
+          },
+          "retries_suppressed": {
+            "type": "integer",
+            "title": "Retries Suppressed"
+          },
+          "retries_deferred": {
+            "type": "integer",
+            "title": "Retries Deferred"
+          },
+          "reroutes_authorised": {
+            "type": "integer",
+            "title": "Reroutes Authorised"
+          },
+          "policy_denials": {
+            "type": "integer",
+            "title": "Policy Denials"
+          },
+          "denials_by_rule": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Denials By Rule"
+          },
+          "human_escalations": {
+            "type": "integer",
+            "title": "Human Escalations"
+          },
+          "llm_fallbacks": {
+            "type": "integer",
+            "title": "Llm Fallbacks"
+          },
+          "provenance": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Provenance"
+          },
+          "detection_score": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DetectionScore"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "batch_id",
+          "dataset_batch_id",
+          "seed",
+          "now",
+          "attempts_ingested",
+          "failed_attempts",
+          "detections",
+          "diagnoses_by_determination",
+          "amount_at_risk_paise",
+          "amount_recovered_paise",
+          "recovery_rate",
+          "action_counts",
+          "outcome_counts",
+          "retries_suppressed",
+          "retries_deferred",
+          "reroutes_authorised",
+          "policy_denials",
+          "denials_by_rule",
+          "human_escalations",
+          "llm_fallbacks",
+          "provenance"
+        ],
+        "title": "RunSummary",
+        "description": "The honest summary of one batch run.\n\nEvery money and count figure here is recomputed from the audit trail by\n`runner.py`, never accumulated in a side counter that could drift from it."
+      }
+    }
+  }
+}

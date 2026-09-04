@@ -242,7 +242,11 @@ class ReceivablesRunner:
         # serving an API request should be reaching for one. So it is persisted
         # on the batch record, beside the dataset id that produced it, and the
         # route serves exactly the numbers the run reported.
-        run.notes = {**(run.notes or {}), "extraction": summary.extraction.model_dump(mode="json")}
+        run.notes = {
+            **(run.notes or {}),
+            "extraction": summary.extraction.model_dump(mode="json"),
+            "run_summary": summary.model_dump(mode="json"),
+        }
         self._db.commit()
         return RunArtefacts(
             summary=summary,

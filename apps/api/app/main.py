@@ -18,6 +18,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1.router import api_router
 from app.core.config import settings
+from app.core.repo_path import ensure_repo_root_importable
 from app.db.base import Base
 from app.db.session import engine
 
@@ -53,6 +54,10 @@ async def lifespan(app: FastAPI):
     Table creation is fine for SQLite at hackathon scale. A real migration tool
     is the answer once the schema has to survive its own history — not now.
     """
+    # The engines sample outcomes from `data.generators.retry_model`, which lives
+    # at the repo root. Without this, `POST /runs` fails with a bare
+    # `ModuleNotFoundError` — see `app/core/repo_path.py`.
+    ensure_repo_root_importable()
     Base.metadata.create_all(bind=engine)
     register_core_tasks()
     register_root_cause_tasks()

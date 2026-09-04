@@ -221,7 +221,7 @@ class MandateRecoveryService:
             hours_since_previous=hours_since,
             attempt_number=mandate.attempts_in_current_cycle + 1,
         )
-        recovered = self._call_razorpay(mandate, outcome)
+        recovered = self._call_razorpay(mandate, outcome, at=at)
         self._trail.resolve_outcome(
             entry_id,
             outcome=Outcome.SUCCESS if outcome.succeeded else Outcome.FAILURE,
@@ -229,7 +229,7 @@ class MandateRecoveryService:
         )
         return recovered, float(outcome.probability)
 
-    def _call_razorpay(self, mandate: Mandate, outcome: Any) -> int:
+    def _call_razorpay(self, mandate: Mandate, outcome: Any, *, at: datetime | None) -> int:
         """Put the debit through the client and audit the call.
 
         A failed debit is replayed through the client only when its decline has a
@@ -262,6 +262,12 @@ class MandateRecoveryService:
             engine=Engine.MANDATE_RECOVERY,
             entity_type=EntityType.MANDATE,
             entity_id=mandate.mandate_id,
+            # The run clock, not wall-clock time. Without it the Razorpay call
+            # is stamped months after the decision that authorised it, and any
+            # timeline containing it stops being ordered. Engine 3 learned this
+            # first; the control tower's "recent decisions" panel made the
+            # consequence visible for the other two.
+            timestamp=at,
         )
         return mandate.amount_paise if result.ok and outcome.succeeded else 0
 

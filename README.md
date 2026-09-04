@@ -5,16 +5,14 @@
 **AI-first revenue recovery.** Built for the Razorpay Buildathon — **AI Revenue
 Recovery** track.
 
-> ### 🚧 Status: shared core, data foundry and Engine 1 built
+> ### Status: all three engines and the control tower are built
 >
 > The shared core — policy engine, reasoning layer, audit trail, Razorpay client
-> — the seeded synthetic data generators with committed sample batches, and
-> **Engine 1 (Root-Cause Recovery)** are in place. Its measured results, false
-> positives included, are in
-> [`docs/metrics/engine-1-root-cause.md`](docs/metrics/engine-1-root-cause.md).
-> Engines 2 and 3 and the dashboard are **not built yet**; they land as separate
-> phases, each with its own check and commit. Nothing in this README claims a
-> capability that exists only as a plan.
+> — the seeded synthetic data generators with committed sample batches, all
+> **three recovery engines**, and the **control tower dashboard** are in place.
+> Each engine's measured results, false positives and underperformance included,
+> are in [`docs/metrics/`](docs/metrics/). Deployment is a stretch goal and is
+> not done. Nothing in this README claims a capability that exists only as a plan.
 
 ---
 
@@ -116,6 +114,8 @@ Environment variables:
 | `LLM_CACHE_PATH` | Where cached provider responses are persisted |
 | `DATABASE_URL` | SQLite path; swap for Postgres later |
 | `DEMO_SEED` | Default seed for the synthetic batch generator |
+| `CORS_ORIGINS` | Comma-separated origins the dashboard may call the API from |
+| `NEXT_PUBLIC_API_BASE_URL` | Where the dashboard looks for the API. Inlined at build time |
 
 **All data in this project is synthetic.** Nothing here touches a real customer,
 a real invoice, or a real rupee — Razorpay is used in test mode only.
@@ -132,14 +132,59 @@ uvicorn app.main:app --reload
 
 → health check at `http://localhost:8000/api/v1/health`, docs at `/docs`.
 
-**Web** (from `apps/web/`):
+**Web** — the control tower (from `apps/web/`):
 
 ```bash
 npm install
 npm run dev
 ```
 
-→ `http://localhost:3000`
+→ `http://127.0.0.1:3000`, with the API expected at `http://127.0.0.1:8000`.
+
+The address is `127.0.0.1` rather than `localhost` on purpose. `uvicorn` binds
+IPv4 loopback by default while some browsers resolve `localhost` to IPv6 first,
+and the failure mode is every page showing its error state against a perfectly
+healthy API. Point the dashboard elsewhere with `NEXT_PUBLIC_API_BASE_URL`, and
+whatever origin the browser ends up using must appear in `CORS_ORIGINS`.
+
+| Command | What it does |
+| --- | --- |
+| `npm run dev` | Development server with hot reload |
+| `npm run build` / `npm run start` | Production build and serve |
+| `npm run check` | Prettier, ESLint, Vitest and the production build, in order |
+| `npm run screenshots` | Capture every surface into `docs/pitch/screenshots/` |
+
+**The dashboard never computes a metric.** Every figure it shows is recomputed
+from the audit trail by the API and formatted for display — money formatting
+lives in exactly one utility, and the cross-engine headline is summed
+server-side in `app/services/overview.py`. Two places that compute a number are
+two numbers that eventually disagree, and one of them disagrees on camera.
+
+Types come from the backend rather than being hand-written beside it:
+
+```bash
+python scripts/generate_api_types.py   # OpenAPI -> packages/shared-types/
+```
+
+Before recording anything, walk
+[`docs/smoke-checklist.md`](docs/smoke-checklist.md) — every route with data,
+without data, and with the API down.
+
+### What the control tower shows
+
+| Route | Surface |
+| --- | --- |
+| `/` | The cross-engine headline, per-engine contributions, and the trust strip — the counts of what the system **refused** to do |
+| `/engines/root-cause` | Corridor health, detections with observed-vs-baseline rates, and detection accuracy scored against ground truth with false positives shown in full |
+| `/engines/mandate-recovery` | Recovery by failure class, both sides of the AFA threshold, compliance blocks by rule, and the upcoming retry schedule |
+| `/engines/receivables` | Extraction accuracy with its confusion matrices, the ranked worklist with score breakdowns, and the promise register |
+| `/timelines/...` | One corridor, mandate or invoice as a story — what happened, what was decided, **which rule authorised it**, what the model reasoned verbatim, and how it ended |
+| `/audit` | The full trail, filterable by run, engine, entity, action, outcome and decision source, with a one-click **policy-denials-only** preset |
+
+Rule-decided steps and LLM-reasoned steps are visually distinct everywhere they
+appear, because "the model supplies judgment, the policy engine supplies
+permission" is the product's central claim and a claim you have to explain is
+not one a judge can check.
 
 ## The datasets
 
@@ -180,11 +225,16 @@ apps/api/          FastAPI backend
   app/services/    the shared core: razorpay_client · llm_agent
                    policy_engine · audit_trail
 apps/web/          Next.js control tower dashboard
+  src/components/ui/        shadcn primitives — never duplicated
+  src/components/features/  Vasooli-specific composed components
+  src/lib/money.ts          the one paise-to-rupee formatter
+packages/shared-types/      TypeScript types generated from the OpenAPI schema
 data/generators/   seeded, reproducible synthetic batches + configs
 data/samples/      committed sample batches (data + manifest)
 data/DATA_CARD.md  every distribution, its rationale, and the limitations
 docs/adr/          architecture decision records
-docs/pitch/        video script and submission answers
+docs/pitch/        video script, submission answers, interface screenshots
+docs/smoke-checklist.md  the pre-recording click-through
 ```
 
 ## On the numbers

@@ -1,10 +1,9 @@
 # Architecture
 
-> **Status: shared core (Phase 1), synthetic data foundry (Phase 2), and all
-> three engines (Phases 3–5) built.** The dashboard does not exist yet — the
-> section describing it is marked *not built* and says what it will consume.
-> This file describes real code; it should never present an aspiration as though
-> it shipped.
+> **Status: shared core (Phase 1), synthetic data foundry (Phase 2), all three
+> engines (Phases 3–5) and the control tower dashboard (Phase 6) built.**
+> Deployment is not. This file describes real code; it should never present an
+> aspiration as though it shipped.
 
 ## The shape
 
@@ -23,7 +22,7 @@ Synthetic data generator (transactions, mandates, invoices)     [BUILT]
                                    │
                      ┌─────────────┴─────────────┐
                      ▼                           ▼
-        Razorpay test-mode API [BUILT]  Control tower dashboard [not built]
+        Razorpay test-mode API [BUILT]  Control tower dashboard [BUILT]
 ```
 
 ## The central constraint
@@ -545,10 +544,16 @@ GET /api/v1/audit/batches                          every run, with its seed
 GET /api/v1/audit/batches/{batch_id}/summary       headline metrics, per source
 GET /api/v1/audit/entities/{type}/{id}/timeline    the decision trail
 GET /api/v1/audit/rules                            the whole policy registry
+GET /api/v1/overview                               the cross-engine headline,
+                                                   per-engine contributions and
+                                                   the trust strip. Summed
+                                                   server-side so the dashboard
+                                                   never computes a metric
 
 POST /api/v1/root-cause/runs                       run the loop over a batch
 GET  /api/v1/root-cause/runs                       every run, with its seed
 GET  /api/v1/root-cause/runs/{batch_id}            one run's record
+GET  /api/v1/root-cause/runs/{id}/summary          the engine's own RunSummary
 GET  /api/v1/root-cause/runs/{id}/detections       filters: determination, allowed
 GET  /api/v1/root-cause/detections/{detection_id}  full diagnosis + reasoning
 GET  /api/v1/root-cause/runs/{id}/actions          every action, with its rule
@@ -558,6 +563,7 @@ GET  /api/v1/root-cause/config                     thresholds, each citing a rul
 POST /api/v1/mandate-recovery/runs                 run the loop over a book
 GET  /api/v1/mandate-recovery/runs                 every run, with its seed
 GET  /api/v1/mandate-recovery/runs/{batch}         one run's record
+GET  /api/v1/mandate-recovery/runs/{id}/summary    the engine's own RunSummary
 GET  /api/v1/mandate-recovery/runs/{batch}/mandates
                                                    filters: route, next_step,
                                                    afa_side, compliance_blocked
@@ -572,6 +578,7 @@ GET  /api/v1/mandate-recovery/config               windows, each citing a rule
 POST /api/v1/receivables/runs                      run the loop over a ledger
 GET  /api/v1/receivables/runs                      every run, with its seed
 GET  /api/v1/receivables/runs/{batch}              one run's record
+GET  /api/v1/receivables/runs/{batch}/summary      the engine's own RunSummary
 GET  /api/v1/receivables/runs/{batch}/extraction   confusion matrix vs ground
                                                    truth, with the abstention
                                                    rate reported separately
@@ -636,20 +643,63 @@ becomes durable state**, which is why it carries `provenance` and
 `model_confidence` as columns rather than only in the trail. An abstention never
 reaches it.
 
-## Frontend
+## Frontend — `apps/web/`
 
-*Not built.* Next.js 14 App Router, TypeScript, Tailwind, shadcn/ui, Recharts.
+Next.js 14 App Router, TypeScript, Tailwind, shadcn/ui, Recharts. Four surfaces,
+in descending order of importance to the demo: the overview, the three engine
+views, the entity timelines, and the audit trail.
 
-- `src/components/ui/` — shadcn primitives, the **one** source of truth, managed
-  by the shadcn CLI. Never duplicated.
-- `src/components/features/` — Vasooli-specific composed components.
+```
+src/components/ui/        shadcn primitives — the ONE source of truth, never duplicated
+src/components/features/  Vasooli-specific composed components
+src/lib/money.ts          paise -> rupees, in exactly one place
+src/lib/api.ts            the typed client; every network call goes through it
+src/hooks/use-api.ts      the one fetch hook, so every surface gets all three states
+packages/shared-types/    types generated from the API's own OpenAPI schema
+```
 
-The dashboard's job is to make the audit trail legible: the headline recovery
-number *with its batch id and seed*, all three engines in one view, the decision
-trail for any entity, and blocked/halted actions shown as prominently as
-successes — they are the compliance evidence. Engine 3 adds two surfaces worth
-rendering directly: the ranked worklist with each invoice's score breakdown, and
-the promise register with its statuses.
+### The one structural rule
+
+**The dashboard never computes a metric.** Everything it renders was recomputed
+from the audit trail by the API; the browser formats and nothing else. Two places
+that compute a number are two numbers that eventually disagree, and the one that
+disagrees on camera is the one nobody can defend.
+
+That rule is what forced the two API additions this phase needed:
+
+- **`GET /api/v1/overview`** — the cross-engine headline. Without it the browser
+  would have fetched three batch summaries and added them up. It lives in
+  `app/services/overview.py`, sums the same per-engine figures
+  `/audit/batches/{id}/summary` reports, and ships every caveat *with* the
+  number: each engine's own definition of what its recovery figure means, and the
+  reason the blended rate is a breadth figure rather than a like-for-like one.
+- **`GET /{engine}/runs/{batch_id}/summary`** — each engine's own `RunSummary`.
+  The per-class, per-branch and per-bucket splits cannot be recomputed from the
+  entries alone (they need the run's outcomes and the dataset), so the run
+  persists them to `BatchRun.notes["run_summary"]` and the route serves what the
+  run reported. The money figures inside were themselves read off the trail, and
+  `/audit/batches/{id}/summary` recomputes those independently — which is what
+  makes the stored copy checkable rather than merely convenient.
+
+### Reasoned versus ruled, as an interface property
+
+Rule-decided steps render slate with a shield; LLM-reasoned steps render violet
+with a brain, the model's reasoning verbatim, and a provenance badge naming the
+model and whether it came from cache. A *degraded* reasoning call — one that fell
+back — is a third, distinct marker, because "the model was asked and could not
+answer" is a different fact from "no model was involved".
+
+This is the product's central safety claim rendered as colour and shape rather
+than as a caption. The distinction has to survive a compressed video on a
+projector, so it is carried three ways at once: the rail, the icon and the badge.
+
+### The trust strip
+
+The overview's most differentiating element is a row of the system's own
+refusals — policy denials, compliance blocks, retries suppressed, messages
+suppressed, human escalations, deterministic fallbacks and abstentions — each
+with a sentence, served by the API, explaining why non-zero is the good outcome.
+Most dashboards hide their refusals. Showing them is the point.
 
 ## Deliberately not doing
 

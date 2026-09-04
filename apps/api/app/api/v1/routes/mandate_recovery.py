@@ -111,6 +111,33 @@ def get_run(batch_id: str, db: DbDep) -> BatchRunRead:
     return BatchRunRead.model_validate(_require_run(batch_id, db))
 
 
+@router.get("/runs/{batch_id}/summary", response_model=RunSummary)
+def get_run_summary(batch_id: str, db: DbDep) -> RunSummary:
+    """The run's own summary — the engine-specific figures the dashboard reads.
+
+    Served from what the run stored rather than recomputed, because the splits in
+    it (recovery by failure class, the AFA branch, wasted attempts avoided) need
+    the run's outcomes and the dataset behind them, and nothing serving an API
+    request should be re-running an engine.
+
+    The money figures inside it were read off the audit trail at the end of the
+    run, and `/audit/batches/{batch_id}/summary` recomputes those independently
+    — so the stored copy is checkable against the trail rather than merely
+    convenient. Quote that route for a headline; quote this one for the breakdown.
+    """
+    run = _require_run(batch_id, db)
+    stored = (run.notes or {}).get("run_summary")
+    if stored is None:
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                f"run {batch_id} stored no engine summary — it predates the field, "
+                "or the run did not complete"
+            ),
+        )
+    return RunSummary.model_validate(stored)
+
+
 @router.get("/runs/{batch_id}/mandates", response_model=list[MandateRecoveryStateRead])
 def list_mandates(
     batch_id: str,
