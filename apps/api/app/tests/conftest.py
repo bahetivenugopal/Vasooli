@@ -19,7 +19,14 @@ from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.db.base import Base
-from app.models import AuditEntry, BatchRun  # noqa: F401 - registers the tables
+from app.models import (  # noqa: F401 - registers the tables
+    AuditEntry,
+    BatchRun,
+    CorridorDetection,
+    CorridorReroute,
+    MandateCommunication,
+    MandateRecoveryState,
+)
 from app.models.entity import RecoverableEntity
 from app.models.enums import EntityType
 from app.services.audit_trail import AuditTrail

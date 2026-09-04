@@ -1,0 +1,44 @@
+{
+  "_comment": [
+    "Engine 2's operating parameters. Every value names the rule that argues for",
+    "it. The regulatory ones (A1-A5) are NOT tunable here — they are resolved from",
+    "policy_engine.py and repeated in this file only so a reader can see them",
+    "beside the numbers that are ours. Changing a Vasooli value here without",
+    "changing the skill makes the citation a lie; changing a regulatory value here",
+    "changes nothing at all, because the gate does not read it."
+  ],
+  "version": "1.0.0",
+  "notice_window": {
+    "min_lead_hours": 24,
+    "max_lead_hours": 48,
+    "target_lead_hours": 36,
+    "rule": "rbi-mandate-rules:A2",
+    "regulatory": true,
+    "note": "target_lead_hours is the midpoint the scheduler aims a fresh notice at. The midpoint is ours; the 24-48h window is not."
+  },
+  "attempts": {
+    "max_per_cycle": 3,
+    "min_spacing_hours": 24,
+    "rule": "rbi-mandate-rules:PartB.max_retries / PartB.min_spacing",
+    "regulatory": false,
+    "note": "Mirrors ENGINE_LIMITS[MANDATE_RECOVERY]. The policy engine is the enforcer; a mismatch here is caught by a test rather than silently honoured."
+  },
+  "afa": {
+    "threshold_paise": 1500000,
+    "rule": "rbi-mandate-rules:A3",
+    "regulatory": true,
+    "note": "Read from the registered `afa_fresh_auth` threshold, repeated here for display only."
+  },
+  "dunning": {
+    "min_confidence": 0.6,
+    "rule": "policy-bounds:TN3",
+    "regulatory": false,
+    "note": "Below this the draft is treated as unreliable and the per-failure-class template applies. Same floor the shared classifier uses; a message is not a place to act on a guess."
+  },
+  "blind_retry_baseline": {
+    "attempts_per_cycle": 3,
+    "rule": "rbi-mandate-rules:PartB.max_retries",
+    "regulatory": false,
+    "note": "The counterfactual the wasted-attempts figure is measured against: a system with no soft/hard split would spend the whole per-cycle budget on every failure. Stated so the number is arguable rather than impressive."
+  }
+}

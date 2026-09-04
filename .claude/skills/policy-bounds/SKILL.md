@@ -177,6 +177,54 @@ Registered thresholds:
 
 ---
 
+## TN — Tone constraints on generated customer messages
+
+**Tone is policy here, not prose preference.** A recovery system drafts messages
+to people who owe money, which is precisely the situation where a fluent model
+will reach for pressure it has no basis for. These bounds are what stop a
+dunning engine from becoming a pressure engine, and they are validated against
+the generated text rather than merely requested in the prompt — a constraint
+that lives only in a prompt is a suggestion.
+
+They apply to **every** customer-facing message any engine generates: Engine 2's
+dunning, Engine 3's reminders, and any notification body.
+
+### TN1 — No fabricated urgency, threats, or unreal consequences
+
+A drafted message may not threaten, imply legal action, credit-bureau reporting,
+service termination, collection agencies, or account penalties, and may not
+manufacture a deadline that no rule actually imposes. Phrases asserting a
+consequence the system cannot and will not carry out are forbidden outright.
+
+**Rationale.** Every one of those is a claim about the future that Vasooli has
+no standing to make, and several are regulated conduct in their own right. A
+message that recovers revenue by asserting a falsehood has not recovered it
+honestly. This is also the single most likely way an LLM makes a demo
+indefensible in front of a payments panel.
+
+### TN2 — Accurate statement of cause and remedy
+
+A message must state **what actually happened** — the real failure class — and
+**what the customer can actually do about it**. It may not attribute the failure
+to the wrong cause, and its call to action must be one the customer can complete.
+
+**Rationale.** Telling a customer whose card expired to "ensure sufficient
+balance" wastes the contact, and burns the one message the QH2 cap allows. It is
+also the tell that the drafting task is not really using the failure
+classification it was given.
+
+### TN3 — A draft that fails validation is replaced, never sent
+
+Validation happens **before** the policy gate, and a failing draft is discarded
+in favour of the registered deterministic template for that failure class. The
+rejection is audited with the constraint it broke.
+
+**Rationale.** The safe direction of error is a boring accurate message, not a
+persuasive unvalidated one. Discarding also keeps the failure visible: a
+rejected draft appears in the trail as a rejection, not as a silent edit.
+
+---
+
 ## HE — Human escalation
 
 Every bounded agent needs an exit hatch. These are Vasooli's.

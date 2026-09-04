@@ -1,10 +1,10 @@
 # Architecture
 
-> **Status: shared core (Phase 1), synthetic data foundry (Phase 2) and Engine 1
-> (Phase 3) built.** Engines 2 and 3 and the dashboard do not exist yet —
-> sections describing them are marked *not built* and say what they will consume.
-> This file describes real code; it should never present an aspiration as though
-> it shipped.
+> **Status: shared core (Phase 1), synthetic data foundry (Phase 2), Engine 1
+> (Phase 3) and Engine 2 (Phase 4) built.** Engine 3 and the dashboard do not
+> exist yet — sections describing them are marked *not built* and say what they
+> will consume. This file describes real code; it should never present an
+> aspiration as though it shipped.
 
 ## The shape
 
@@ -12,7 +12,7 @@
 Synthetic data generator (transactions, mandates, invoices)     [BUILT]
         │
         ├──► Root-cause engine ────┐                           [BUILT]
-        ├──► Mandate engine ───────┤                           [not built]
+        ├──► Mandate engine ───────┤                           [BUILT]
         └──► Receivables engine ───┤                           [not built]
                                    │
                     ┌──────────────┼──────────────┐
@@ -85,10 +85,18 @@ is deliberate: a decision the trail cannot record is a decision nobody can check
 3. Terminal decline class → halt, schedule cancelled *(HS2, A4)*
 4. Abstention → escalate to a human *(HE1)*
 5. High-value hard failure → escalate *(HE3)*
-6. Attempt cap → the strictest of ceiling, engine cap and class budget *(AC1/AC2, Part B, taxonomy budgets)*
-7. Cooldown / escalating backoff *(CD1/CD2, Part B spacing)*
-8. Quiet hours and contact cap, outreach only *(QH1, QH2)*
-9. Otherwise permitted, inside a stated `permitted_actions` envelope
+6. Corridor reroute preconditions, Engine 1 only *(RR2, ES1, RR3)*
+7. Mandate debit preconditions, Engine 2 only *(PartB.paused, A2, PartB.notice_staleness, PartB.mandate_cap, A1, A5, A3)*
+8. Attempt cap → the strictest of ceiling, engine cap and class budget *(AC1/AC2, Part B, taxonomy budgets)*
+9. Cooldown / escalating backoff *(CD1/CD2, Part B spacing)*
+10. Quiet hours and contact cap, outreach only *(QH1, QH2)*
+11. Otherwise permitted, inside a stated `permitted_actions` envelope
+
+Steps 6 and 7 sit **above** the attempt cap deliberately. `AFA_REQUIRED` is
+`POLICY_BLOCK` with a retry budget of 0, so a cap-first evaluation would refuse
+every authentication failure citing a budget rule and the trail would never say
+that authentication was the problem. ADR 0008 argues the ordering and names its
+cost.
 
 Every rule is declared in `RULE_REGISTRY` with an id, a description and a
 citation; `_deny()` and `_permit()` refuse an unregistered id, so a decision
@@ -164,8 +172,12 @@ unclassifiable decline as **HARD** — the taxonomy's fail-safe, since defaultin
 to soft means defaulting to "keep charging this customer". A model answer below
 0.6 confidence takes the same path.
 
-Engine-specific tasks (root-cause diagnosis, dunning drafting, promise
-extraction) register in their own phases, with the fallbacks ADR 0002 specifies.
+Engine 1 registers `diagnose_corridor`; Engine 2 registers
+`draft_dunning_message`, whose fallback is a per-failure-class template rather
+than an abstention — a message is one of the few places where the rule-based
+answer is nearly as good as the reasoned one, and abstaining would cost a real
+recovery to avoid a small quality loss. Engine 3's promise extraction registers
+in its own phase, with the fallback ADR 0002 specifies.
 
 ### Provenance
 
@@ -304,6 +316,97 @@ All named in the `corridor-detection` skill and registered in `policy_engine.py`
 Measured results, including the false positive, are in
 [`docs/metrics/engine-1-root-cause.md`](metrics/engine-1-root-cause.md).
 
+## Engine 2 — Mandate & Subscription Recovery · `apps/api/app/engines/mandate_recovery/`
+
+The engine where domain correctness matters more than cleverness. Anyone can
+write a retry loop; this one respects the ₹15,000 AFA threshold, the 24–48h
+pre-debit notification window, and an immediate hard stop on revocation.
+
+| Module | Responsibility |
+| --- | --- |
+| `config.py` / `config.json` | Compliance windows and bounds, each saying whether it is regulatory or ours. Raises if it disagrees with the gate |
+| `dataset.py` | Reads the mandates `.jsonl`. Refuses a manifest path outright |
+| `classification.py` | Routes a recurring failure. Reuses the shared taxonomy; adds only what recurrence introduces |
+| `scheduler.py` | The compliance-aware retry scheduler. **No model** |
+| `dunning.py` | The drafting task, the tone gate, and the per-failure-class templates |
+| `recovery.py` | The four bounded actions, each authorised before it happens |
+| `runner.py` | The batch loop and the honest summary |
+
+### The data flow
+
+```
+mandates .jsonl (records only — never the manifest)
+   │
+   ├─ classification.py ── shared decline_taxonomy.classify(), plus the routing a
+   │                       mandate needs and a one-off payment does not:
+   │                         AFA_REQUIRED             -> authentication (A5)
+   │                         PRE_DEBIT_NOTICE_MISSING -> compliance     (A2)
+   │                         MANDATE_REVOKED/EXPIRED  -> terminal       (A4)
+   │                       an unrecognised code -> the shared
+   │                       classify_unknown_decline task, else HARD
+   │
+   ├─ scheduler.py ─────── proposes a debit at the moment it would actually fire,
+   │                       and asks policy_engine.evaluate() about *that* moment
+   │                         A2 / staleness -> notify, reschedule beyond the window
+   │                         A1 / A3 / A5   -> customer authentication
+   │                         PartB.paused   -> block, schedule suspended
+   │                         cap / spacing  -> dunning, or defer
+   │                       → ScheduleExplanation: what next, when, which rule
+   │
+   ├─ dunning.py ───────── llm_agent.run("draft_dunning_message", context)
+   │                       → channel · subject · body · call to action ·
+   │                         recommended action (enumerated) · reasoning
+   │                       ↳ policy-bounds TN1/TN2 validated against the text
+   │                       ↳ fallback: per-failure-class template, slot-filled
+   │
+   ├─ recovery.py ──────── policy_engine.authorize(request, recommendation)
+   │                       outreach is bounded by QH1/QH2, never by the debit
+   │                       budget — see `scheduler.outreach_entity`
+   │                       → attempt_charge · send_pre_debit_notice ·
+   │                         send_dunning · escalate, each audited
+   │
+   └─ runner.py ────────── summary recomputed from `audit_entries`, reported by
+                           failure class, by AFA branch, and against two stated
+                           denominators
+```
+
+### Three things that carry the weight
+
+**The proposed debit time is what gets evaluated**, not the wall clock. A retry
+is a scheduled future debit, so the notice window, the 24h Part B spacing and the
+escalating backoff are all measured against the moment the debit would fire.
+
+**A message is not a charge.** `outreach_entity()` presents the mandate to the
+gate with the *message* count as its attempt count, so a customer message is
+bounded by QH1/QH2 and not by the debit budget. Without it the dunning path would
+be silent on exactly the mandates that most need it: a hard decline has spent its
+debit budget by definition.
+
+**Nothing is dispatched.** Communications are drafted, tone-validated,
+policy-gated, persisted and rendered. `MandateCommunication` has no recipient
+column and its `status` vocabulary has no `sent` value. See ADR 0009.
+
+### Bounds this engine adds
+
+All named in `rbi-mandate-rules` or `policy-bounds` and registered in
+`policy_engine.py`:
+
+| Rule | Bound | Kind |
+| --- | --- | --- |
+| `rbi-mandate-rules:A1` | AFA at registration, before any debit | Regulatory |
+| `rbi-mandate-rules:A2` | Pre-debit notice 24–48h ahead of every debit | Regulatory |
+| `rbi-mandate-rules:A3` | Above ₹15,000, fresh AFA each cycle | Regulatory |
+| `rbi-mandate-rules:A5` | An `AFA_REQUIRED` decline never silent-retries | Regulatory |
+| `rbi-mandate-rules:PartB.notice_staleness` | A notice over 48h old is stale | Ours |
+| `rbi-mandate-rules:PartB.mandate_cap` | No debit above the registered cap | Ours |
+| `rbi-mandate-rules:PartB.paused` | A paused mandate blocks; it does not terminate | Ours |
+| `policy-bounds:TN1` / `TN2` / `TN3` | No threats or invented urgency; the remedy must fit the failure; a failing draft is replaced by the template | Ours |
+
+ADR 0008 records how the constraints are encoded and which timings are regulation
+rather than product judgment. Measured results, including what underperformed,
+are in [`docs/metrics/engine-2-mandate-recovery.md`](metrics/engine-2-mandate-recovery.md).
+
+
 ## API surface
 
 ```
@@ -325,11 +428,26 @@ GET  /api/v1/root-cause/detections/{detection_id}  full diagnosis + reasoning
 GET  /api/v1/root-cause/runs/{id}/actions          every action, with its rule
 GET  /api/v1/root-cause/runs/{id}/reroutes         filter: active_at
 GET  /api/v1/root-cause/config                     thresholds, each citing a rule
+
+POST /api/v1/mandate-recovery/runs                 run the loop over a book
+GET  /api/v1/mandate-recovery/runs                 every run, with its seed
+GET  /api/v1/mandate-recovery/runs/{batch}         one run's record
+GET  /api/v1/mandate-recovery/runs/{batch}/mandates
+                                                   filters: route, next_step,
+                                                   afa_side, compliance_blocked
+GET  /api/v1/mandate-recovery/runs/{batch}/mandates/{mandate_id}
+                                                   the full timeline — every
+                                                   decision, rule and message
+GET  /api/v1/mandate-recovery/runs/{batch}/communications
+                                                   filters: status, kind
+GET  /api/v1/mandate-recovery/runs/{batch}/actions every action, with its rule
+GET  /api/v1/mandate-recovery/config               windows, each citing a rule
 ```
 
-The audit routes stay read-only. `POST /root-cause/runs` writes, but only by
-delegating the whole loop to `RootCauseRunner` — there is no route that can
-produce an audit entry without a decision behind it.
+The audit routes stay read-only. `POST /root-cause/runs` and
+`POST /mandate-recovery/runs` write, but only by delegating the whole loop to
+their runner — there is no route that can produce an audit entry without a
+decision behind it.
 
 Read-only by design: the trail is written by services and nothing else. Engine
 routers mount onto `api_router` as each phase lands. OpenAPI docs at `/docs`.
@@ -347,10 +465,14 @@ Two invariants hold everywhere:
   the column: naive datetimes are rejected on write rather than silently assumed
   to be UTC, and everything read back is tz-aware.
 
-Tables: `audit_entries`, `batch_runs`, `corridor_detections`, `corridor_reroutes`.
-The last two hold Engine 1's artefacts and are **not** metric sources: every
-reported figure is recomputed from `audit_entries`, so a stale row in either can
-never become a number anyone quotes. `RecoverableEntityMixin` carries the
+Tables: `audit_entries`, `batch_runs`, `corridor_detections`, `corridor_reroutes`,
+`mandate_recovery_states`, `mandate_communications`. The last four hold the
+engines' artefacts and are **not** metric sources: every reported figure is
+recomputed from `audit_entries`, so a stale row in any of them can never become a
+number anyone quotes. The two mandate tables are keyed by `(batch_id, …)` rather
+than by entity id, because one dataset feeds many runs and a table that could
+hold only one run's view of a mandate would overwrite the previous run's
+evidence. `RecoverableEntityMixin` carries the
 fields all three engines share (identifier, amount in paise, currency, status,
 attempt count, last-attempt timestamp, terminal flag) for the engine-specific
 tables that arrive in later phases.

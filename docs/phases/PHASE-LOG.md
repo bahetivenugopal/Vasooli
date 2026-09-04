@@ -408,3 +408,140 @@ real work — if a generator signature changes, they break first.
 No mandate or subscription logic, no invoice logic, no UI, no live Razorpay
 traffic (simulated mode throughout, and the mode is on every `api_call` entry).
 Commits were left to the user.
+
+---
+
+## Phase 4 — Engine 2: Mandate & Subscription Recovery
+
+**Status:** complete · **Date:** 2026-09-04
+**Verified by:** 416 pytest passing (174 new), `ruff check` clean from the repo
+root *and* from `apps/api/`, a full live-provider batch run, a full no-provider
+run, and `/audit-check` passing with 0 violations over 111 entries on both.
+
+### What now exists
+
+`apps/api/app/engines/mandate_recovery/` — seven modules mapping onto the loop:
+
+- `config.py` + `config.json` — compliance windows and bounds, each labelled
+  regulatory or ours. **Raises at load if it disagrees with the gate**
+- `dataset.py` — reads the mandates `.jsonl`, **refuses a manifest path**
+- `classification.py` — routes a recurring failure. Reuses the shared taxonomy
+- `scheduler.py` — the compliance-aware retry scheduler. No model, ever
+- `dunning.py` — the `draft_dunning_message` task, the TN tone gate, the templates
+- `recovery.py` — the four bounded actions, each authorised first
+- `runner.py` — the loop, and a summary recomputed from the audit trail
+
+Plus: ten new mandate rules and three tone rules in `policy_engine.py`, five new
+`PolicyRequest` gate fields, two new tables (`mandate_recovery_states`,
+`mandate_communications`), eight API routes under `/api/v1/mandate-recovery/`,
+`scripts/mandate_demo.py`, ADRs 0008 and 0009, and
+`docs/metrics/engine-2-mandate-recovery.md`.
+
+### The measured result, in one line
+
+Recovery 1.69% of ₹7,92,346 at risk, **30.48% of the ₹43,839 the engine was
+permitted to debit**; 40 compliance-blocked attempts across five distinct rules;
+24 retries suppressed for an estimated 28 wasted attempts avoided; 8 model
+recommendations overruled. Full numbers, including what underperformed, are in
+`docs/metrics/engine-2-mandate-recovery.md` — **quote that file, not this line.**
+
+### Deviations from the phase file, and why
+
+| # | Deviation | Why it happened |
+| --- | --- | --- |
+| 1 | **`rbi-mandate-rules` Part B rows got ids; two rows are new** | Part B had no citable ids at all, so `PartB.max_retries` and `PartB.min_spacing` — already used since Phase 1 — were citing nothing resolvable. Each row is now `PartB.<id>`. Two bounds the gate needed had no home: `mandate_cap` (the skill's precondition 3) and `paused` (precondition 1's third clause). Added with rationale rather than written inline. |
+| 2 | **Tone constraints became a new `policy-bounds` section, TN1–TN3** | §5.3 says "tone constraints are policy, not prose preference" and requires validating output against them. There was no named rule to cite. TN1 (no threats or invented urgency), TN2 (accurate cause and completable remedy), TN3 (a failing draft is replaced, never edited). Engine-agnostic — Engine 3 will need them. |
+| 3 | **A second denominator, `addressable_recovery_rate`** | The honest blended rate is 1.69%, because 80% of the money at risk sits above the AFA threshold or behind a hard stop where no compliant system may auto-debit. Reported as a *subset*, with its definition shipped in the API response and the demo output so it cannot be quoted without the caveat. Both numbers, never one. |
+| 4 | **A revoked mandate gets zero communications, not the "single permitted notice" §5.1 allows** | `policy-bounds:HS1` permits no action of any kind, and the stricter bound wins. Costs 7 mandates' worth of outreach. Pinned by a test so it cannot drift back. Argued in ADR 0008. |
+| 5 | **Mandate preconditions are evaluated *above* the attempt cap** | Following the skill's own precondition order. `AFA_REQUIRED` is `POLICY_BLOCK` with a budget of 0, so a cap-first evaluation refuses every authentication failure citing a budget rule and the trail never says authentication was the problem. The cost: 4 of the 7 cap-reached mandates are refused by an earlier gate, so only 3 report `ATTEMPT_BUDGET_EXHAUSTED`. Both orderings argued in ADR 0008. |
+| 6 | **`outreach_entity()` — a message is bounded by QH1/QH2, not by the debit budget** | Found on the first real run: *every* dunning message was refused, because `evaluate()` applies the attempt cap and the 24h Part B spacing to any action, and a hard decline has spent its debit budget by definition. Outreach now presents the *message* count as the entity's attempt count. **Engine 3 must do the same** — its whole engine is outreach. |
+| 7 | **An inadmissible recommendation substitutes the template rather than silencing the customer** | The live model recommended `schedule_retry` on 8 mandates at 0.95–1.00 confidence, having written messages announcing that retry ("prepares them for the scheduled retry"). Holding the message would have left those customers with nothing; sending it would have promised a retry that is not coming. Same remedy as a TN3 tone rejection: discard the draft, use the template, keep the refusal on the record. |
+| 8 | **`classify_unknown_decline` is wired but fires zero times** | Phase 3 deviation #7 left it for Engine 2. It is wired — an unrecognised failure code routes to it and falls back to HARD — and on this book every code is in the taxonomy, so it never fires. Reported as zero in the summary rather than quietly omitted; covered by a unit test, not by the batch. |
+| 9 | **`RecoverableEntityMixin` is not used for the new tables** | Its `entity_id` is `unique=True`, which is right for a live entity table and wrong for a per-run snapshot: one dataset feeds many runs, and the second run would collide. Both tables are keyed `(batch_id, …)` instead. |
+| 10 | **No scoring module** | §7 does not ask for one and the phase has no precision/recall criterion. The one ground-truth check that mattered — that the engine derives the same pre-debit notice profile the generator recorded — lives in the test suite instead, where it belongs. |
+
+### Things a later phase will otherwise get wrong
+
+**A message is not a charge, and the gate cannot tell them apart on its own.**
+Deviation #6 is the trap. `PolicyEngine.evaluate()` applies the attempt cap and
+the cooldown to *whatever* action is proposed, so passing `mandate_entity()` for
+an outreach decision silently gates the message on the debit budget. Engine 3 is
+entirely outreach; use the `outreach_entity()` shape, or the receivables ladder
+will refuse its own second reminder.
+
+**The run clock is derived from the latest debit actually attempted, not the
+latest timestamp in the file.** Every mandate's `next_debit_at` is in the future
+relative to the book's `as_of`, so "max timestamp" lands up to 56 hours past the
+moment the book describes and every pre-debit notice looks stale. The anchor
+errs *early*, which is the safe direction — a clock behind the data can only make
+the engine more conservative and can never fabricate elapsed cooldown. Invoices
+have the same shape; do not reuse Engine 1's "last record" default.
+
+**`--now` changes the answer, and correctly.** The default anchor lands at 06:39
+IST, outside the QH1 outreach window, so *every* customer message is held and
+rescheduled. That is the rule working, and it looks like a broken dunning path.
+The demo and the metrics doc both report two clocks for this reason. Engine 3
+will have the same problem more acutely.
+
+**Money is booked once per mandate, on the first entry written for it.**
+`MandateRecoveryService._booked` enforces it, and a test asserts every entity has
+exactly one entry carrying a non-zero `amount_at_risk_paise`. Engine 1 learned
+this the expensive way (Phase 3 deviation #3); this is the same rule made
+checkable rather than remembered.
+
+**A mandate with no failure in the current cycle books zero at risk**, but still
+gets a compliance check — a healthy mandate whose upcoming debit has no notice is
+a compliance problem, and the notice is the cheapest possible fix. 12 of the 21
+healthy mandates take that path.
+
+**`config.json` displays regulation; it does not set it.** `load_config()` raises
+if the notice window, the attempt cap or the AFA threshold in the file disagrees
+with `policy_engine.py`. The failure this prevents is a file reading
+`min_lead_hours: 6` while the gate enforces 24, so the engine looks configurable
+and is not.
+
+**The live run and the deterministic run recover exactly the same money.** The
+model drafts messages; it does not decide debits. Say so whenever the two are
+quoted together, or the model appears to have earned the number. Same property as
+Engine 1, for the same reason.
+
+**The tone gate's `FORBIDDEN_PATTERNS` are English.** A Hinglish or vernacular
+channel — the optional bonus in `CLAUDE.md` — would pass a threat written in
+Hindi straight through. Noted in ADR 0009 rather than discovered later.
+
+### Observations worth carrying forward
+
+- **The gate earned its keep on the first live run.** The model recommended
+  `schedule_retry` on a *paused* mandate at confidence 1.00, and on four mandates
+  blocked on authentication at 0.95. Eight refusals in 24 drafts. This is the
+  best evidence in the project so far that "the policy engine has final
+  authority" is structural rather than aspirational — better than anything Engine
+  1 produced, because the model here is confidently wrong rather than uncertain.
+- **Confidence remains uninformative on this task.** Every overruled
+  recommendation came in at 0.95–1.00. Phase 1 worried about this; Engine 1 saw a
+  useful 0.55 on a genuinely ambiguous corridor. The pattern seems to be that the
+  model is well-calibrated when asked to *judge* and overconfident when asked to
+  *act*. Worth not relying on `min_confidence` as a safety mechanism for
+  action-shaped tasks.
+- **One tone rejection fired on live output**, on a `TRANSACTION_LIMIT_EXCEEDED`
+  failure where the model chose `contact_support` — a remedy that cannot resolve
+  a limit the customer's own bank sets. TN2 caught it. The gate is not decorative.
+- **The engine's derived notice profiles match the generator's ground truth on 54
+  of 64 mandates**, the other 10 being `not_yet_due`, which the engine
+  conservatively reads as `missing`. Checked in the test suite, which may read the
+  manifest; the engine may not.
+- **The deterministic templates initially failed their own tone gate** — 9
+  rejections in the first no-key run, because a code-keyed template was selected
+  for a route it did not fit. A fallback that a rejection falls back *to* must
+  satisfy the constraints itself; `template_for()` now lets the route win, and a
+  parametrised test covers every (code × route) pair.
+- **Cache hits were 15/15 on the second live run.** Seeded re-runs of this engine
+  are effectively free, with the same caveat Phase 3 noted: a result rejected by
+  the confidence floor is not cached.
+
+### Not done in this phase (deliberately)
+
+No invoice or receivables logic, no UI, no voice channel, no live Razorpay
+traffic (simulated mode throughout, and the mode is on every `api_call` entry),
+no multi-cycle simulation, and no message ever dispatched to anyone. Commits were
+left to the user.

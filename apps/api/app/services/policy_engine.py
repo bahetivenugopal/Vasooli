@@ -109,6 +109,56 @@ RULE_REGISTRY: dict[str, PolicyRule] = {
             RuleSource.RBI_MANDATE_RULES,
             "rbi-mandate-rules -> Part A, A4",
         ),
+        _rule(
+            "rbi-mandate-rules:PartB.paused",
+            "hard_stop",
+            "A paused mandate accepts no debit. Reversible, unlike revocation, so "
+            "it blocks the attempt rather than terminating the mandate.",
+            RuleSource.RBI_MANDATE_RULES,
+            "rbi-mandate-rules -> Part B, paused",
+        ),
+        # --- Mandate debit preconditions (Engine 2) ------------------------
+        _rule(
+            "rbi-mandate-rules:A1",
+            "mandate_precondition",
+            "A mandate requires one-time AFA at registration. Until it succeeds "
+            "there is no mandate and no debit is permissible. Regulatory.",
+            RuleSource.RBI_MANDATE_RULES,
+            "rbi-mandate-rules -> Part A, A1",
+        ),
+        _rule(
+            "rbi-mandate-rules:A2",
+            "mandate_precondition",
+            "A pre-debit notification must reach the customer 24-48 hours before "
+            "every scheduled debit, retries included. Regulatory.",
+            RuleSource.RBI_MANDATE_RULES,
+            "rbi-mandate-rules -> Part A, A2",
+        ),
+        _rule(
+            "rbi-mandate-rules:A5",
+            "mandate_precondition",
+            "A debit declined for missing AFA is its own failure mode. Retrying it "
+            "without obtaining authentication reproduces the decline forever. "
+            "Regulatory.",
+            RuleSource.RBI_MANDATE_RULES,
+            "rbi-mandate-rules -> Part A, A5",
+        ),
+        _rule(
+            "rbi-mandate-rules:PartB.notice_staleness",
+            "mandate_precondition",
+            "A pre-debit notice older than 48 hours is stale. Re-notify rather "
+            "than debit against it.",
+            RuleSource.RBI_MANDATE_RULES,
+            "rbi-mandate-rules -> Part B, notice_staleness",
+        ),
+        _rule(
+            "rbi-mandate-rules:PartB.mandate_cap",
+            "mandate_precondition",
+            "A debit above the amount authorised at registration is not covered by "
+            "the mandate, whatever else holds.",
+            RuleSource.RBI_MANDATE_RULES,
+            "rbi-mandate-rules -> Part B, mandate_cap",
+        ),
         # --- Attempt caps --------------------------------------------------
         _rule(
             "policy-bounds:AC1",
@@ -189,6 +239,31 @@ RULE_REGISTRY: dict[str, PolicyRule] = {
             "policy-bounds -> QH3",
         ),
         # --- Amount thresholds ----------------------------------------------
+        # --- Tone constraints on generated messages -------------------------
+        _rule(
+            "policy-bounds:TN1",
+            "tone",
+            "A generated message may not threaten, imply a consequence the system "
+            "will not carry out, or manufacture a deadline no rule imposes.",
+            RuleSource.POLICY_BOUNDS,
+            "policy-bounds -> TN1",
+        ),
+        _rule(
+            "policy-bounds:TN2",
+            "tone",
+            "A generated message must state the real failure and a remedy the "
+            "customer can actually complete.",
+            RuleSource.POLICY_BOUNDS,
+            "policy-bounds -> TN2",
+        ),
+        _rule(
+            "policy-bounds:TN3",
+            "tone",
+            "A draft failing tone validation is discarded in favour of the "
+            "deterministic template, and the rejection is audited.",
+            RuleSource.POLICY_BOUNDS,
+            "policy-bounds -> TN3",
+        ),
         _rule(
             "policy-bounds:AT1",
             "amount_threshold",
@@ -390,6 +465,13 @@ OUTREACH_CLOSE_HOUR = 21
 MAX_MESSAGES_PER_WINDOW = 3
 CONTACT_WINDOW = timedelta(days=7)
 
+#: rbi-mandate-rules:A2 — regulatory, not ours. A pre-debit notification reaches
+#: the customer 24-48h before every scheduled debit, retries included. The upper
+#: bound is restated as `PartB.notice_staleness`, which is where the decision to
+#: treat "too early" as a violation rather than a curiosity is argued.
+NOTICE_MIN_LEAD_HOURS = 24.0
+NOTICE_MAX_LEAD_HOURS = 48.0
+
 
 @dataclass(frozen=True)
 class EngineLimits:
@@ -480,6 +562,36 @@ class PolicyRequest(BaseModel):
     #: `corridor-detection:RR3` exactly as `False` does — a reroute to nowhere is
     #: an audit entry claiming an action that cannot have happened.
     alternate_route_available: bool | None = None
+
+    # --- Engine 2: the mandate debit preconditions ------------------------
+    #
+    # These live on the request, not inside the engine, for the same reason the
+    # corridor fields do: a precondition an engine is trusted to check itself is
+    # an intention, and an engine can always forget. Here they are gates.
+    # All four are consulted only for `attempt_charge` on `mandate_recovery`.
+
+    #: A pause is a customer instruction to stop collecting. Reversible, so it
+    #: blocks the debit rather than terminating the mandate
+    #: (`rbi-mandate-rules:PartB.paused`).
+    mandate_paused: bool = False
+
+    #: Whether the mandate ever completed one-time AFA registration
+    #: (`rbi-mandate-rules:A1`). `None` means "not established" and denies
+    #: exactly as `False` does — an unevaluable precondition is not a green light.
+    afa_registered: bool | None = None
+
+    #: Hours between the pre-debit notice and the scheduled debit
+    #: (`rbi-mandate-rules:A2`). `None` means no notice was sent at all.
+    notice_lead_hours: float | None = None
+
+    #: The maximum the customer authorised at registration
+    #: (`rbi-mandate-rules:PartB.mandate_cap`). `None` means "not established".
+    mandate_cap_paise: int | None = None
+
+    #: Whether fresh per-cycle AFA has been completed for this debit. Consulted
+    #: only above the `afa_fresh_auth` threshold, where `rbi-mandate-rules:A3`
+    #: requires it. Below the threshold a registered mandate needs no fresh OTP.
+    fresh_afa_completed: bool = False
 
 
 class PolicyDecision(BaseModel):
@@ -804,6 +916,22 @@ class PolicyEngine:
                     requires_human=True,
                 )
 
+        # 2c. Mandate debit preconditions (Engine 2).
+        #
+        # Ordered exactly as `rbi-mandate-rules` -> Preconditions states them, and
+        # placed above the attempt caps deliberately: an AFA or notice failure has
+        # to be refused for the reason that actually applies. `AFA_REQUIRED` is
+        # POLICY_BLOCK with a budget of 0, so a cap check running first would
+        # refuse every one of them citing a budget rule and the trail would never
+        # say that authentication was the problem.
+        if (
+            request.engine is Engine.MANDATE_RECOVERY
+            and request.proposed_action is Action.ATTEMPT_CHARGE
+        ):
+            refusal = self._mandate_debit_preconditions(request)
+            if refusal is not None:
+                return refusal
+
         # 3. Attempt caps. The effective cap is the strictest applicable bound.
         cap, cap_rule = self._effective_cap(request, limits, spec)
         attempts_remaining = max(cap - entity.attempt_count, 0)
@@ -967,6 +1095,137 @@ class PolicyEngine:
         )
 
     # --- internals ---------------------------------------------------------
+
+    def _mandate_debit_preconditions(self, request: PolicyRequest) -> PolicyDecision | None:
+        """The `rbi-mandate-rules` gate every mandate debit passes through.
+
+        Returns a denial, or `None` when every precondition holds. Revocation
+        (A4) is not here — it is checked first, in `evaluate()`, because it
+        short-circuits every other consideration including these.
+
+        Each branch fails **closed**: `None` on a precondition means "not
+        established", which denies exactly as `False` does. A debit permitted
+        because nobody supplied the notice timestamp would be the whole gate
+        quietly turned off.
+        """
+        entity = request.entity
+
+        # 1. Mandate is active. (Part B, paused)
+        if request.mandate_paused:
+            return _deny(
+                rule_id="rbi-mandate-rules:PartB.paused",
+                reason_code="MANDATE_PAUSED",
+                rationale=(
+                    f"Mandate {entity.entity_id} is paused. A pause is a customer "
+                    "instruction to stop collecting, so no debit fires — but it is "
+                    "reversible, so the schedule is suspended rather than cancelled."
+                ),
+                attempts_remaining=0,
+            )
+
+        # 2. Pre-debit notice was sent, and the timing is right. (A2)
+        lead = request.notice_lead_hours
+        if lead is None or lead < NOTICE_MIN_LEAD_HOURS:
+            stated = "no notice was sent" if lead is None else f"only {lead:.1f}h ahead"
+            return _deny(
+                rule_id="rbi-mandate-rules:A2",
+                reason_code=DeclineCode.PRE_DEBIT_NOTICE_MISSING.value,
+                rationale=(
+                    f"A pre-debit notification must reach the customer "
+                    f"{NOTICE_MIN_LEAD_HOURS:.0f}-{NOTICE_MAX_LEAD_HOURS:.0f}h before "
+                    f"every debit, retries included; {stated}. Send the notice and "
+                    "reschedule the debit beyond the window — never attempt against "
+                    "a notice that was not given."
+                ),
+                attempts_remaining=None,
+            )
+        if lead > NOTICE_MAX_LEAD_HOURS:
+            return _deny(
+                rule_id="rbi-mandate-rules:PartB.notice_staleness",
+                reason_code=DeclineCode.PRE_DEBIT_NOTICE_MISSING.value,
+                rationale=(
+                    f"The pre-debit notice went out {lead:.1f}h ahead of this debit, "
+                    f"past the {NOTICE_MAX_LEAD_HOURS:.0f}h staleness ceiling. A notice "
+                    "that old is not the notice A2 requires — re-notify, then debit."
+                ),
+                attempts_remaining=None,
+            )
+
+        # 3. Amount is within the registered mandate cap. (Part B, mandate_cap)
+        cap_paise = request.mandate_cap_paise
+        if cap_paise is None:
+            return _deny(
+                rule_id="rbi-mandate-rules:PartB.mandate_cap",
+                reason_code="MANDATE_CAP_UNKNOWN",
+                rationale=(
+                    f"The registered cap for mandate {entity.entity_id} could not be "
+                    "established, so there is nothing to check this debit against. "
+                    "Failing closed."
+                ),
+                requires_human=True,
+            )
+        if entity.amount_paise > cap_paise:
+            return _deny(
+                rule_id="rbi-mandate-rules:PartB.mandate_cap",
+                reason_code="MANDATE_CAP_EXCEEDED",
+                rationale=(
+                    f"{_rupees(entity.amount_paise)} is above the "
+                    f"{_rupees(cap_paise)} the customer authorised at registration. "
+                    "A debit outside the mandate is not covered by what they agreed "
+                    "to, so it is refused rather than attempted."
+                ),
+                requires_human=True,
+            )
+
+        # 4. AFA status matches the amount. (A1, then A3/A5)
+        if request.afa_registered is not True:
+            stated = "never completed" if request.afa_registered is False else "not established"
+            return _deny(
+                rule_id="rbi-mandate-rules:A1",
+                reason_code=DeclineCode.AFA_REQUIRED.value,
+                rationale=(
+                    f"One-time AFA registration for mandate {entity.entity_id} is "
+                    f"{stated}. Until registration succeeds there is no mandate to "
+                    "debit against, and every retry reproduces the same decline."
+                ),
+                attempts_remaining=0,
+            )
+        if (
+            request.decline_code is DeclineCode.AFA_REQUIRED
+            and not request.fresh_afa_completed
+        ):
+            # More specific than A3, and the reason this branch exists at all: the
+            # issuer already asked for authentication we did not supply. A3 says
+            # when fresh AFA is *required*; A5 says what retrying without it costs.
+            return _deny(
+                rule_id="rbi-mandate-rules:A5",
+                reason_code=DeclineCode.AFA_REQUIRED.value,
+                rationale=(
+                    f"The last debit on mandate {entity.entity_id} was declined for "
+                    "missing AFA and no authentication has happened since. Retrying "
+                    "reproduces the identical decline forever, so the budget is spent "
+                    "for a guaranteed-zero return. Route to customer authentication."
+                ),
+                attempts_remaining=0,
+            )
+        if (
+            exceeds_threshold("afa_fresh_auth", entity.amount_paise)
+            and not request.fresh_afa_completed
+        ):
+            return _deny(
+                rule_id="rbi-mandate-rules:A3",
+                reason_code=DeclineCode.AFA_REQUIRED.value,
+                rationale=(
+                    f"{_rupees(entity.amount_paise)} is above the "
+                    f"{_rupees(THRESHOLDS['afa_fresh_auth'].value_paise)} per-transaction "
+                    "threshold, so this cycle needs fresh AFA. It cannot be silently "
+                    "auto-debited; the customer has to authenticate first (A5: a "
+                    "silent retry reproduces this decline forever)."
+                ),
+                attempts_remaining=0,
+            )
+
+        return None
 
     def _effective_cap(
         self,

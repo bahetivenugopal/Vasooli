@@ -81,14 +81,20 @@ identical decline, forever. It burns retry budget for a guaranteed-zero return.
 Ours. Chosen to be conservative and provable. Tunable, but only in one place:
 `policy_engine.py`, with the change recorded in an ADR.
 
-| Bound | Value | Rationale |
-| --- | --- | --- |
-| Max retry attempts per billing cycle (soft decline) | **3** | Bounded so "stopping rules" is provable. Below the `decline-taxonomy` SOFT budget of 4, because mandate flows are more constrained than one-off payments |
-| Minimum spacing between retries | **24 hours** | Any shorter cannot satisfy the A2 notification window for the retry itself |
-| Pre-debit notice staleness ceiling | **48 hours** | Per A2. A notice older than this is stale — re-notify rather than debit against it |
-| Attempts after a hard decline | **0** | Per `decline-taxonomy` |
-| Attempts after `MANDATE_REVOKED` / `MANDATE_EXPIRED` | **0**, schedule cancelled | Per A4 |
-| Attempts after `FRAUD_SUSPECTED` | **0**, human review | Never auto-anything on a risk block |
+Each row carries an **id**, cited from `policy_engine.py` as
+`rbi-mandate-rules:PartB.<id>`. A bound with no id cannot be cited, and a rule
+that cannot be cited must not exist — see `CLAUDE.md` non-negotiable #1.
+
+| Id | Bound | Value | Rationale |
+| --- | --- | --- | --- |
+| `max_retries` | Max retry attempts per billing cycle (soft decline) | **3** | Bounded so "stopping rules" is provable. Below the `decline-taxonomy` SOFT budget of 4, because mandate flows are more constrained than one-off payments |
+| `min_spacing` | Minimum spacing between retries | **24 hours** | Any shorter cannot satisfy the A2 notification window for the retry itself |
+| `notice_staleness` | Pre-debit notice staleness ceiling | **48 hours** | Per A2. A notice older than this is stale — re-notify rather than debit against it |
+| `mandate_cap` | Debit above the amount authorised at registration | **blocked** | The registration the customer authenticated (A1) fixes a maximum. A debit above it is not covered by what they agreed to, so it is refused rather than attempted — even when every other precondition holds |
+| `paused` | Debits against a **paused** mandate | **blocked**, schedule suspended not cancelled | A pause is a customer instruction to stop collecting, so no debit may fire. Unlike revocation (A4) it is reversible, so it blocks the attempt rather than terminating the mandate — conflating the two would either resume collecting on a paused mandate or permanently kill one the customer only paused |
+| — | Attempts after a hard decline | **0** | Per `decline-taxonomy` |
+| — | Attempts after `MANDATE_REVOKED` / `MANDATE_EXPIRED` | **0**, schedule cancelled | Per A4 |
+| — | Attempts after `FRAUD_SUSPECTED` | **0**, human review | Never auto-anything on a risk block |
 
 ---
 

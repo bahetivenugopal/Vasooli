@@ -20,6 +20,12 @@ from app.models.enums import (
     ProvenanceSource,
     RuleSource,
 )
+from app.models.mandate import (
+    MandateCommunication,
+    MandateCommunicationRead,
+    MandateRecoveryState,
+    MandateRecoveryStateRead,
+)
 from app.models.provenance import Provenance
 from app.models.root_cause import (
     CorridorDetection,
@@ -45,6 +51,10 @@ __all__ = [
     "DeclineClass",
     "Engine",
     "EntityType",
+    "MandateCommunication",
+    "MandateCommunicationRead",
+    "MandateRecoveryState",
+    "MandateRecoveryStateRead",
     "Outcome",
     "Provenance",
     "ProvenanceSource",
