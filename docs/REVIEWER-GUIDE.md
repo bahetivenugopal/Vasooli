@@ -65,6 +65,28 @@ reproduce.
 **You need:** Python 3.12, Node 18+, git. **You do not need:** a Gemini key, a
 Razorpay key, a database, or an internet connection.
 
+### On Windows: one command
+
+```bat
+git clone https://github.com/bahetivenugopal/Vasooli.git
+cd Vasooli
+run.bat
+```
+
+That is the whole thing. `run.bat` checks everything the project needs, repairs
+what it can (virtual environment, dependencies, `.env`, sample data,
+`node_modules`), runs all three engines, verifies the numbers, starts the API and
+the dashboard, and opens the browser once both are actually answering. Anything
+it cannot repair itself — a wrong Python version, a port already in use — it
+names, along with the exact command that fixes it.
+
+`run.bat check` reports without changing anything, `run.bat demo` stops after the
+run and its verification, and `run.bat stop` shuts the services down. Details in
+[`docs/RUNNING.md`](RUNNING.md#the-launcher--runbat-windows).
+
+The steps below are the same thing done by hand. Follow them on macOS or Linux,
+or if you would rather see each step.
+
 ### The five steps
 
 ```bash
@@ -487,6 +509,11 @@ Flagged up front, because each one reads as a bug for about four seconds.
 
 ## 7. When it doesn't run
 
+**On Windows, try `run.bat check` first.** It walks every precondition — the
+interpreter, the virtual environment, the dependencies, `.env`, `CORS_ORIGINS`,
+the datasets, Node, and both ports — and prints the problem *and* its fix for
+each one it finds. It changes nothing, so it is safe to run at any point.
+
 Every row below is something that **actually happened while building this**, and
 its actual fix. Nothing here is hypothetical.
 
@@ -560,8 +587,8 @@ Stated here rather than left for you to find.
 6. **This is a ~30-hour prototype.** No auth, no multi-tenancy, no background
    workers, SQLite, one process.
 
-The full list, with everything else we know is weak, is in the README's *Honest
-limitations* and in `docs/RESULTS.md` §7.
+The full list, with everything else we know is weak, is in
+[`docs/LIMITATIONS.md`](LIMITATIONS.md) and in `docs/RESULTS.md` §8.
 
 ---
 
@@ -572,7 +599,9 @@ Only if you want to — none of it is needed to run or judge the product.
 | Document | What is in it |
 | --- | --- |
 | [`docs/WALKTHROUGH.md`](WALKTHROUGH.md) | The exhaustive tour — every panel on every screen, and why it exists |
-| [`README.md`](../README.md) | The full project overview, stack, and safety argument |
+| [`README.md`](../README.md) | The project overview, stack, and safety argument |
+| [`docs/LIMITATIONS.md`](LIMITATIONS.md) | Everything we know is weak, stated plainly |
+| [`docs/RUNNING.md`](RUNNING.md) | Every command, every environment variable, and the no-keys mode |
 | [`docs/RESULTS.md`](RESULTS.md) | Every measured number and exactly how it was produced |
 | [`docs/metrics/`](metrics/) | Per-engine detail, including what underperformed |
 | [`docs/architecture.md`](architecture.md) | How the shared core is put together |

@@ -1,0 +1,15 @@
+{
+  "//": "Pylance/pyright import resolution, and nothing else. Everything in `scripts/` and `data/generators/` inserts `apps/api` on sys.path at runtime so it can import `app.*` without installing the API as a package — see the top of scripts/unified_demo.py. A static analyser cannot see a runtime sys.path.insert, so it reports every one of those imports as unresolved. These extraPaths tell it what the runtime already knows. Committed rather than left in .vscode/, which is gitignored — a per-machine setting would leave the same false errors in front of anyone who clones this.",
+
+  "extraPaths": ["apps/api", "."],
+
+  "//venv": "So a bare `npx pyright` from the repo root resolves fastapi, sqlalchemy and the rest instead of reporting 91 unresolved imports. Pylance uses the interpreter you select in the editor and ignores these two, so they only affect command-line runs.",
+  "venvPath": "apps/api",
+  "venv": ".venv",
+
+  "//typeCheckingMode": "Deliberately `off`, which is what this repo was written against. Import resolution and syntax errors are still reported — the actual point of this file. Raising it to `basic` surfaces ~66 pre-existing findings, almost all of them pyright disagreeing with SQLAlchemy's Mapped[] declarative typing rather than a defect in the code. Turning it up is a real piece of work someone should choose to do, not a side effect of adding an import path.",
+  "typeCheckingMode": "off",
+
+  "//exclude": "`**/.*` restores the default exclusion of dotted directories, which naming an explicit exclude list otherwise discards.",
+  "exclude": ["**/.*", "**/node_modules", "**/__pycache__", "apps/web/.next"]
+}

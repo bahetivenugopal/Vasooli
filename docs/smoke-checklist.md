@@ -14,6 +14,11 @@ disagrees with the API.
 
 ## 0. Bring both services up
 
+On Windows, `run.bat` does this section for you — it starts both services and
+waits until each one actually answers before reporting them up. `run.bat check`
+verifies the preconditions below (ports free, `CORS_ORIGINS` correct, datasets
+present) without starting anything. By hand:
+
 ```bash
 # terminal 1 — the API
 cd apps/api
