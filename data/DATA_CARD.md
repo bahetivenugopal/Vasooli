@@ -128,7 +128,7 @@ Mandate id, customer, `amount_paise` per cycle, frequency, `registered_at`,
 | --- | --- | --- |
 | Amounts straddle ₹15,000 | 38 at/below, 26 above (measured) | `rbi-mandate-rules:A3`. Two of the four amount buckets sit deliberately *just* either side of the threshold, because a branch only exercised far from a boundary has not really been exercised. |
 | Cohorts | allocated exactly, not sampled | Several acceptance criteria are "this case is present". A revoked mandate that shows up only on lucky seeds is not a test. Measured: healthy 17, first_failure 14, repeat_failure 10, cap_reached 7, revoked 7, paused 5, notice_violation 4. |
-| Attempt cap cases | 7 mandates at 3 failed attempts | `rbi-mandate-rules` Part B caps a cycle at 3. These exist so the 4th attempt can be refused on camera. |
+| Attempt cap cases | 7 mandates at 3 failed attempts | `rbi-mandate-rules` Part B caps a cycle at 3. These exist so the 4th attempt can be refused in a run. |
 | Retry spacing in history | 24–34h | Part B requires ≥24h, because anything shorter cannot satisfy the A2 notification window for the retry itself. |
 | Pre-debit notices | on_time 24–48h · late 2–23h · stale 50–96h · missing | A2 is violable in three distinct ways and all three are present in every batch. `not_yet_due` is a fourth, non-violating state: a debit more than 48h out simply has no notice yet, and the manifest distinguishes it so nobody scores it as a violation. |
 | Failure mix (all attempts) | SOFT 0.649 · HARD 0.095 · TERMINAL 0.095 · AMBIGUOUS 0.081 · POLICY_BLOCK 0.081 | Lifecycle outcomes (revocations, registration blocks) are *placed*, not drawn, so they inflate the non-soft share. |

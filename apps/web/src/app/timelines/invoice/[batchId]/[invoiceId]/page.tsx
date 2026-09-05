@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Invoice timeline — the surface that carries the video.
+ * Invoice timeline — the surface that carries the whole argument.
  *
  * This is the one page where the whole product argument is visible in a single
  * scroll: a reminder went out, the customer replied in their own words, a model
@@ -17,7 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AsyncBoundary } from "@/components/features/async-boundary";
 import { Field, Money } from "@/components/features/metric-card";
-import { PageHeader } from "@/components/features/app-shell";
+import { BackLink, PageHeader } from "@/components/features/app-shell";
 import { ProvenanceBadge, RuleBadge } from "@/components/features/provenance-badge";
 import { Timeline, TimelineLegend } from "@/components/features/timeline";
 import { api } from "@/lib/api";
@@ -45,6 +45,7 @@ export default function InvoiceTimelinePage({
 
   return (
     <>
+      <BackLink fallbackHref="/engines/receivables" fallbackLabel="the worklist" />
       <PageHeader
         title="Invoice timeline"
         description="One overdue invoice as a story: what we sent, what the customer said back, what the model read in it, what became of the commitment, and the rule behind every step — including the ones that refused."

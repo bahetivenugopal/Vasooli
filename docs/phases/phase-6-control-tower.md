@@ -12,9 +12,9 @@ Build the Next.js frontend that makes everything the three engines do visible: a
 
 ## 2. Why this phase comes sixth
 
-Three working engines that can only be observed through JSON responses will lose to a weaker project with a clear interface, because a five-minute video cannot show a terminal for five minutes and hold attention. This phase is where the work becomes legible.
+Three working engines that can only be observed through JSON responses will lose to a weaker project with a clear interface, because nobody assesses a system by reading its raw responses. This phase is where the work becomes legible.
 
-But the ordering matters in the other direction too: building the UI last means it displays real measured numbers rather than placeholders that later need reconciling. Nothing in this dashboard should ever compute a metric — it reads what the audit trail already computed. If the UI ever calculates a number itself, there are now two sources of truth and one of them will eventually be wrong on camera.
+But the ordering matters in the other direction too: building the UI last means it displays real measured numbers rather than placeholders that later need reconciling. Nothing in this dashboard should ever compute a metric — it reads what the audit trail already computed. If the UI ever calculates a number itself, there are now two sources of truth and one of them will eventually be wrong.
 
 ---
 
@@ -39,7 +39,7 @@ But the ordering matters in the other direction too: building the UI last means 
 ### Out of scope
 - Authentication, multi-tenancy, user management. This is a demonstration console, not a SaaS product, and building auth would consume time that belongs to the demo.
 - Real-time websockets. Polling during a run is sufficient and far more reliable to demo.
-- Mobile-responsive perfection. Make it not break on a narrower window; do not spend hours on it. The video will be recorded on a desktop.
+- Mobile-responsive perfection. Make it not break on a narrower window; do not spend hours on it. This is a desktop console.
 - Any metric computation client-side.
 
 ---
@@ -65,7 +65,7 @@ The single most important screen in the project. It must answer, within about th
 - **Per-engine contribution** — a breakdown showing how each engine contributed, so the breadth claim is visible rather than asserted.
 - **Trust strip** — a compact row of the numbers that prove boundedness: policy denials, compliance-blocked actions, messages suppressed, human escalations raised, deterministic fallbacks handled, and abstentions routed to human review. These should be presented as *features*, with brief labels making clear that non-zero is good. Most dashboards hide their refusals; showing them is the point.
 - **Recent activity** — the last several audit entries, each with its authorizing rule, linking through to the full trail.
-- A visible **batch run trigger** so a live demo can start a run on camera.
+- A visible **batch run trigger** so a run can be started from the browser.
 
 Every number here comes from the batch summary API. No client-side arithmetic beyond formatting.
 
@@ -81,7 +81,7 @@ Charts via Recharts, kept simple. A clear bar chart beats an elaborate visualiza
 
 ### 5.4 Entity timelines
 
-This is the surface that will carry the video, because a single case unfolding chronologically is a story, while a dashboard of aggregates is a report.
+This is the surface that carries the whole argument, because a single case unfolding chronologically is a story, while a dashboard of aggregates is a report.
 
 Each timeline shows, in order: what happened, what the system decided, **which rule authorized it**, what the model reasoned (verbatim, where an LLM call was involved), what action followed, and what the outcome was. Rule-based steps and LLM-reasoned steps must be visually distinguishable at a glance — that distinction is the product's core safety claim and it should be readable without explanation. Each reasoning block carries a compact **provenance badge**: model name, whether it was served from cache, and — where the deterministic fallback produced it — a clearly distinct marker. A judge scrolling a timeline should be able to tell at a glance what was reasoned, what was ruled, and by what.
 
@@ -96,9 +96,9 @@ Include a filter preset for "policy denials only" — being able to click one co
 ### 5.6 Engineering constraints
 
 - **Component reuse is enforced, not encouraged.** shadcn primitives live in `components/ui/` and are never duplicated. Composed, feature-specific components live in `components/features/`. Metric cards, timeline rows, rule badges, and money formatters are each defined once. If a second near-identical component appears, that's a defect to fix, not a shortcut to accept.
-- **One money formatter.** Paise-to-rupee conversion and formatting happens in exactly one utility, used everywhere. Money formatting bugs on camera are avoidable and embarrassing.
+- **One money formatter.** Paise-to-rupee conversion and formatting happens in exactly one utility, used everywhere. Money formatting bugs are avoidable and embarrassing.
 - **Types come from the backend.** Generate or hand-align types from the FastAPI OpenAPI schema into `packages/shared-types/`. Do not hand-write drifting duplicates.
-- **Loading and error states everywhere.** A batch run takes time; the UI must show progress rather than appearing frozen. Every fetch has a visible failure state. A blank screen during a live demo is worse than an error message.
+- **Loading and error states everywhere.** A batch run takes time; the UI must show progress rather than appearing frozen. Every fetch has a visible failure state. A blank screen is worse than an error message.
 - **Empty states** that explain how to get data (run a batch) rather than showing a bare empty table.
 - Follow the visual identity: neutral base, grey/red for at-risk, teal/green for recovered, used consistently enough that color alone communicates state.
 
@@ -111,7 +111,7 @@ Include a filter preset for "policy denials only" — being able to click one co
 | All frontend work | `frontend-builder` | — |
 | API client and type alignment | `frontend-builder` | — |
 | Verifying displayed numbers match audit-derived values | `test-engineer` | `audit-schema` |
-| Docs and screenshots | `docs-and-pitch-writer` | — |
+| Docs and screenshots | — | — |
 | Commits | — | `conventional-commits` |
 
 The `frontend-builder` agent's standing constraint applies throughout: never create a new primitive if one exists in `components/ui/` — reuse or extend.
@@ -149,7 +149,7 @@ Frontend testing is deliberately light here; the backend carries the correctness
 
 - Update `README.md` with frontend setup and run instructions.
 - Commit the manual smoke checklist to `docs/`.
-- Capture screenshots of each major surface into `docs/pitch/` — these feed the video and the README, and having them before Phase 8 saves time under pressure.
+- Capture screenshots of each major surface into `docs/screenshots/` — these feed the README and the reviewer docs.
 
 ---
 

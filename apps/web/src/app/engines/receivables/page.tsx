@@ -401,7 +401,7 @@ function WorklistTable({
 }) {
   const rows = useRowLimit(invoices);
   return (
-    <Card>
+    <Card id="worklist">
       <CardContent className="p-0">
         <Table>
           <TableHeader>
@@ -473,7 +473,7 @@ function WorklistTable({
                 </TableCell>
                 <TableCell>
                   <Link
-                    href={`/timelines/invoice/${encodeURIComponent(batchId)}/${encodeURIComponent(invoice.invoice_id)}`}
+                    href={`/timelines/invoice/${encodeURIComponent(batchId)}/${encodeURIComponent(invoice.invoice_id)}?from=%2Fengines%2Freceivables%23worklist&fromLabel=the+worklist`}
                     className="inline-flex items-center gap-1 text-sm font-medium hover:underline"
                   >
                     Timeline

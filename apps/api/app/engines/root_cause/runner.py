@@ -8,8 +8,8 @@ then the headline number and its evidence disagree.
 The two numbers the phase brief singles out are both reported plainly:
 
 - **Policy denials.** Actions the reasoning layer recommended and the rules
-  refused. A non-zero count is the proof that the gate is real, and it belongs in
-  the pitch rather than buried.
+  refused. A non-zero count is the proof that the gate is real, and it belongs
+  up front rather than buried.
 - **False positives.** Detections the generator's ground truth does not back.
   Reported with the corridor and the numbers behind them, so a reader can judge
   whether the threshold is set sensibly rather than taking a precision figure on
@@ -78,8 +78,8 @@ RETRY_MODEL_IMPORT = "data.generators.retry_model"
 
 #: What Engine 1's recovery figure means, and the one thing it deliberately does
 #: not claim. A module constant because the cross-engine overview quotes it, and
-#: because the reroute caveat is the sort of thing that quietly disappears from a
-#: pitch if it only lives in a metrics doc.
+#: because the reroute caveat is the sort of thing that quietly disappears if it
+#: only lives in a metrics doc.
 RECOVERY_DEFINITION = (
     "amount recovered = the value of failed payments that a per-payment retry, "
     "authorised against that payment's own decline class and budget, went on to "

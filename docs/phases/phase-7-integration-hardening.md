@@ -14,7 +14,7 @@ Turn three separately-built engines and a dashboard into one coherent, demonstra
 
 Everything works in isolation at this point. Nothing has been proven to work *together*, and the demo depends entirely on the together case. This phase exists to find the seams before a judge does.
 
-It's also the phase where the repository itself becomes a deliverable rather than a byproduct. The submission is a repo, a video, and a written account of technical obstacles — and the repo is the artifact a panelist can study at their own pace, long after the video ends.
+It's also the phase where the repository itself becomes a deliverable rather than a byproduct. The repo is the artifact a panelist can study at their own pace, and it has to stand on its own.
 
 ---
 
@@ -38,8 +38,7 @@ It's also the phase where the repository itself becomes a deliverable rather tha
 
 ### Out of scope
 - New features. If something is missing at this point, it stays missing unless it is genuinely broken. Adding capability now risks the demo for marginal gain.
-- Deployment — Phase 8.
-- Video production — Phase 8.
+- Deployment.
 - Refactors that aren't fixing an actual defect. Elegance is not worth risk at this stage.
 
 ---
@@ -78,7 +77,7 @@ Any discrepancy found here is a defect to fix, not a rounding issue to explain a
 
 ### 5.4 Failure-path rehearsal
 
-The competition's bar explicitly rewards showing a failure handled gracefully. Rehearse these deliberately, confirm each degrades cleanly and is audited, and note which ones are worth showing on camera:
+The competition's bar explicitly rewards showing a failure handled gracefully. Rehearse these deliberately, confirm each degrades cleanly and is audited, and note which ones leave something observable behind:
 
 - Gemini API unavailable mid-batch.
 - Gemini rate limit exceeded beyond backoff.
@@ -97,7 +96,7 @@ The system should survive all of them without a crashed run, and the audit trail
 
 The README is the highest-traffic artifact in the submission. Structure it to be read by someone with limited time:
 
-- Project name, tagline, and the one-paragraph pitch.
+- Project name, tagline, and the one-paragraph summary.
 - The headline result up front — measured recovery across the unified batch, stated with its methodology and a plain acknowledgment that the data is synthetic and the assumptions are documented. Leading with an honest number framed honestly is more persuasive than burying it.
 - Architecture diagram and a short explanation of the shared-core design.
 - What each engine does, in a few lines each.
@@ -129,7 +128,7 @@ Also: complete `docs/architecture.md` with the final flows, verify every ADR fro
 | Unified runner and consolidated report | `policy-architect` | `audit-schema` |
 | Metric integrity audit | `test-engineer` | `audit-schema` |
 | Failure-path rehearsal | `test-engineer` | — |
-| README, architecture, ADR completeness | `docs-and-pitch-writer` | — |
+| README, architecture, ADR completeness | — | — |
 | Clean-clone verification | `test-engineer` | — |
 | Commits | — | `conventional-commits` |
 
@@ -168,7 +167,7 @@ Also: complete `docs/architecture.md` with the final flows, verify every ADR fro
 
 - Final `README.md` per 5.5.
 - Final `docs/architecture.md`.
-- A short `docs/RESULTS.md` with the unified run's full measured output and methodology — this is the citable evidence behind the video's claims and the answer to any judge who asks "where does that number come from?"
+- A short `docs/RESULTS.md` with the unified run's full measured output and methodology — this is the citable evidence behind every claim in the repo, and the answer to any judge who asks "where does that number come from?"
 - `docs/adr/` complete.
 
 ---
@@ -189,6 +188,4 @@ Also: complete `docs/architecture.md` with the final flows, verify every ADR fro
 
 When acceptance criteria pass and commits are pushed, **stop and report back**: the full consolidated report numbers, confirmation the clean-clone path works, the list of failure paths rehearsed with how each behaved, and a candid list of anything still weak or unpolished.
 
-That last item matters — Phase 8 needs to know what not to point a camera at, and the submission's technical-obstacles answer should be written from real problems, not invented ones.
-
-Do not begin Phase 8. The next phase file will be provided separately.
+That last item matters — the technical-obstacles write-up should be built from real problems, not invented ones.

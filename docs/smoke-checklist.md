@@ -157,7 +157,7 @@ DATABASE_URL=sqlite:///./empty.db .venv/Scripts/python -m uvicorn app.main:app
 - [ ] Open a timeline for an entity that does not exist. The API's own 404 detail
       is shown, not a blank page.
 
-Captured as `docs/pitch/screenshots/09-failure-state-api-unreachable.png`.
+Captured as `docs/screenshots/09-failure-state-api-unreachable.png`.
 
 ## 4. Batch run from the UI
 

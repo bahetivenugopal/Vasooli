@@ -50,9 +50,14 @@ capabilities absorbing **five** of the track's seven example directions:
    text-understanding task), and escalates only **broken** promises, on a capped
    ladder.
 
-**Out of scope:** checkout drop-off recovery, and Hinglish voice as a *core*
-engine (optional bonus channel on Engine 2's notification step, only if all three
-engines are solid and demo-ready first — never before).
+**Out of scope:** checkout drop-off recovery, and a Hinglish **voice** channel.
+
+**Hinglish itself is in scope and built.** Engine 3 reads Hinglish replies as a
+first-class case — the `understand_reply` prompt handles code-mixed text
+explicitly, every reading is tagged `en` / `hinglish` / `mixed`, and the Hinglish
+subset scores 11/11 on the measured run. What is out is *speaking* it: a voice
+channel on Engine 2's notification step, and only if all three engines are solid
+and demo-ready first — never before. Do not describe Hinglish as unsupported.
 
 ## Architecture — the one structural fact that matters
 
@@ -95,7 +100,7 @@ Final. Do not deviate without a documented reason in `docs/adr/`.
 | Payments | Official `razorpay` Python SDK; direct `httpx` only for what the SDK doesn't cover; **test-mode keys only, always** |
 | Testing | Pytest, focused heavily on `policy_engine.py` — the credibility backbone of the submission |
 | Lint/format | Ruff (Python), ESLint + Prettier (TypeScript) |
-| Deployment | Stretch goal only, after all 3 engines work locally and the video is recorded — Vercel + Railway/Render |
+| Deployment | Stretch goal only, after all 3 engines work locally — Vercel + Railway/Render |
 
 **Explicitly not doing:** no Kubernetes or Docker Compose, no splitting engines
 into microservices (one FastAPI app, separated by folder), no custom agent
@@ -120,7 +125,7 @@ apps/api/app/tests/                pytest
 data/generators/                   seeded synthetic data
 data/samples/                      committed sample batches
 docs/adr/                          architecture decision records
-docs/pitch/                        video script + submission answers
+docs/screenshots/                  interface screenshots of every surface
 ```
 
 - Python: `snake_case` files, engine folders `snake_case`.
@@ -134,7 +139,7 @@ docs/pitch/                        video script + submission answers
 Context** rather than vague instructions.
 
 `.claude/agents/` — `policy-architect` · `razorpay-integrator` ·
-`data-synthesizer` · `frontend-builder` · `test-engineer` · `docs-and-pitch-writer`
+`data-synthesizer` · `frontend-builder` · `test-engineer`
 
 `.claude/skills/` — reference knowledge to load **before** touching related code:
 

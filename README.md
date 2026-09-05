@@ -220,13 +220,13 @@ From `apps/web/`:
 | `npm run dev` | Development server with hot reload |
 | `npm run build` / `npm run start` | Production build and serve |
 | `npm run check` | Prettier, ESLint, Vitest and the production build, in order |
-| `npm run screenshots` | Capture every surface into `docs/pitch/screenshots/` |
+| `npm run screenshots` | Capture every surface into `docs/screenshots/` |
 
 **The dashboard never computes a metric.** Every figure it shows is recomputed
 from the audit trail by the API and formatted for display — money formatting
 lives in exactly one utility, and the cross-engine headline is summed
 server-side in `app/services/overview.py`. Two places that compute a number are
-two numbers that eventually disagree, and one of them disagrees on camera.
+two numbers that eventually disagree, and one of them is the wrong one.
 
 Types come from the backend rather than being hand-written beside it:
 
@@ -234,7 +234,7 @@ Types come from the backend rather than being hand-written beside it:
 python scripts/generate_api_types.py   # OpenAPI -> packages/shared-types/
 ```
 
-Before recording anything, walk
+To confirm the whole surface is behaving, walk
 [`docs/smoke-checklist.md`](docs/smoke-checklist.md) — every route with data,
 without data, and with the API down.
 
@@ -309,8 +309,10 @@ docs/metrics/      per-engine measured results, underperformance included
 docs/failure-paths.md    ten rehearsed failure paths and how each degrades
 docs/adr/          architecture decision records
 docs/phases/       the phase plans, and PHASE-LOG.md — the build's own record
-docs/pitch/        video script, submission answers, interface screenshots
-docs/smoke-checklist.md  the pre-recording click-through
+docs/REVIEWER-GUIDE.md   run it from a clean clone, and what every screen means
+docs/WALKTHROUGH.md      every panel on every screen, and why it exists
+docs/screenshots/  interface screenshots of every surface
+docs/smoke-checklist.md  the full click-through
 ```
 
 ## Safety and boundedness
@@ -474,8 +476,8 @@ skill first.
 
 **Agents are Role / Task / Context framed.** [`.claude/agents/`](.claude/agents/)
 — `policy-architect`, `razorpay-integrator`, `data-synthesizer`,
-`frontend-builder`, `test-engineer`, `docs-and-pitch-writer` — each with an
-explicit remit rather than vague instructions.
+`frontend-builder`, `test-engineer` — each with an explicit remit rather than
+vague instructions.
 
 **Commands are the repeatable checks.** `/audit-check`, `/run-batch-demo`,
 `/new-engine`. `/audit-check` began as a checklist a human walks and became

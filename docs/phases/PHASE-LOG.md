@@ -401,7 +401,7 @@ real work — if a generator signature changes, they break first.
 - **`policy_violations` stayed 0 and `blocked` / `halted` / `escalated` stayed
   non-zero** on every run, which is the shape Phase 1 said to expect.
 - **The Gemini SDK prints an AFC advisory to stderr on every call.** Cosmetic,
-  from `google-genai`, not from our code. Ignore it, or silence it in Phase 8.
+  from `google-genai`, not from our code. Ignore it, or silence it later.
 
 ### Not done in this phase (deliberately)
 
@@ -666,7 +666,7 @@ on their *least* important invoice.
   none of them from the templates — and that is where the real evidence turned
   out to be: zero fabricated promises, three honest abstentions, "next Friday"
   resolved correctly from a Friday, and a third party's promised date correctly
-  ignored. The probe is better pitch material than the 100%.
+  ignored. The probe is better evidence than the 100%.
 - **Confidence is informative on this task.** Phase 4 concluded the model is
   "well-calibrated when asked to judge and overconfident when asked to act", and
   reading a reply is judging: the probe returned 0.20 on an empty reply and 0.50
@@ -776,7 +776,7 @@ On the backend: `services/overview.py` + `models/overview.py` + a new
 on all three engines, and `test_api_overview.py`.
 
 Also: `docs/smoke-checklist.md`, and fifteen screenshots in
-`docs/pitch/screenshots/` with an index — including the empty states, the
+`docs/screenshots/` with an index — including the empty states, the
 failure state and the run trigger, because a gallery of successes is the
 cherry-picking the competition's bar warns against.
 
@@ -792,7 +792,7 @@ disagreement starts.
 
 | # | Deviation | Why it happened |
 | --- | --- | --- |
-| 1 | **A new endpoint, `GET /api/v1/overview`, and a fifth module in `services/`** | §5.2 requires a headline "aggregated across all three engines" and §5.6 forbids client-side metric computation. Nothing in the API answered the first, so the only way to satisfy both was to sum server-side. It lives in the shared core rather than an engine because it is cross-engine by definition. It ships each engine's own recovery definition on its contribution row, and the reason the blended rate is a breadth figure — the caveats travel with the number rather than living in a doc nobody opens on camera. |
+| 1 | **A new endpoint, `GET /api/v1/overview`, and a fifth module in `services/`** | §5.2 requires a headline "aggregated across all three engines" and §5.6 forbids client-side metric computation. Nothing in the API answered the first, so the only way to satisfy both was to sum server-side. It lives in the shared core rather than an engine because it is cross-engine by definition. It ships each engine's own recovery definition on its contribution row, and the reason the blended rate is a breadth figure — the caveats travel with the number rather than living in a doc nobody opens. |
 | 2 | **Each engine's `RunSummary` is now persisted and served** | §5.3 asks each engine view for splits — recovery by failure class, the AFA branch, per-ageing-bucket recovery, detection scoring — that **cannot be recomputed from the audit entries alone**: they need the run's own outcomes and the dataset. They existed only in the `POST /runs` response, which nothing stored. Each runner now writes `notes["run_summary"]` and a `GET /runs/{id}/summary` serves it, following the precedent Engine 3 set with `notes["extraction"]`. The money figures inside were read off the trail, and `/audit/batches/{id}/summary` recomputes those independently — which is what makes the stored copy checkable rather than merely convenient. |
 | 3 | **`POST /runs` had never worked through the API, for any engine** | All three engines lazily import `data.generators.retry_model` from the repo root. The demo scripts bootstrap `sys.path`; pytest supplies it for free via rootdir. **Uvicorn does neither**, so every `POST /runs` died with `ModuleNotFoundError: No module named 'data'` — a route that passed its tests and had never once been called for real. The dashboard's run trigger was the first thing to call it. Fixed with `core/repo_path.py`, invoked from the lifespan, plus a regression test that asserts the import works *from inside the app's lifespan* — because the failure is invisible to every other test in the suite. |
 | 4 | **Engine 2's `record_call` timestamp defect fixed; Engine 1's deliberately not** | Phase 5 recorded this as "one keyword argument from fixed". For Engine 2 that was true, and it is fixed: its `attempt_charge` entries already carry the scheduled debit time, so the `api_call` now matches instead of jumping to wall-clock. For Engine 1 it was **not** true — its `schedule_retry` entries are themselves wall-clock, so a run-clock `api_call` landed *before* the decision authorising it and put 41 payment timelines out of order. Reverted, with the reasoning in a comment at the call site. Engine 1's timestamps are wrong *together*, which keeps them ordered; making them right means moving its decision entries too. |
@@ -940,9 +940,9 @@ every limitation are in `docs/RESULTS.md` — **quote that file, not this line.*
 
 ### The four defects the integration work found
 
-Recorded because Phase 8's technical-obstacles answer should come from these
-rather than from invented ones, and because three of the four were invisible to
-every existing test.
+Recorded because the technical-obstacles write-up should come from these rather
+than from invented ones, and because three of the four were invisible to every
+existing test.
 
 1. **`npm run check` did not exist.** The README documented it, Phase 6's log
    claims it ran clean, and the script was never in `package.json` — along with
@@ -1023,17 +1023,17 @@ credibility argument rests on it. Keep that property when adding a check.
 - **`policy_violations` stayed 0 and refusals stayed non-zero** on every run, in
   both modes — the shape Phase 1 said to expect.
 - **The clean clone took about four minutes end to end** and needed no keys, no
-  database setup and no dataset generation. That property is worth demonstrating
-  on camera; it is the most practically valuable thing in the build.
+  database setup and no dataset generation. That property is worth
+  demonstrating; it is the most practically valuable thing in the build.
 - **`policy_engine.py` coverage is 99%** (248 statements, 1 missed), measured
   with `pytest --cov=app.services.policy_engine`. `pytest-cov` is **not** in
   `requirements.txt` — it was installed ad hoc to measure. Add it if coverage
   becomes a routine check.
 
-### Still weak or unpolished — what Phase 8 should not point a camera at
+### Still weak or unpolished
 
 The phase file asks for this explicitly, and it is the honest material the
-submission's technical-obstacles answer wants.
+technical-obstacles write-up wants.
 
 1. **Engine 2's blended recovery rate is 1.69% and looks broken.** It is
    correct — 80% of the money at risk sits above the AFA threshold or behind a
@@ -1044,11 +1044,11 @@ submission's technical-obstacles answer wants.
 2. **Engine 2's default run clock lands at 06:39 IST**, outside the outreach
    window, so *every* dunning message is held. That is `policy-bounds:QH1`
    working, and it looks like a broken dunning path. Use `--now` for a
-   mid-afternoon clock if the demo needs to show a message going out.
-3. **Engine 3's 100% extraction score is a liability on camera**, not an asset.
-   Show the adversarial probe instead — twelve hand-written replies, zero
-   fabricated promises, three honest abstentions. A panelist who hears "100%"
-   discounts everything after it.
+   mid-afternoon clock if a run needs to show a message going out.
+3. **Engine 3's 100% extraction score is a liability**, not an asset. Cite the
+   adversarial probe instead — twelve hand-written replies, zero fabricated
+   promises, three honest abstentions. A panelist who hears "100%" discounts
+   everything after it.
 4. **The unified headline is a breadth figure and Engine 3 dominates it.**
    Rs 92.94 L of the Rs 94.90 L is Engine 3, because a B2B invoice book is three
    orders of magnitude larger than a mandate book. The contribution chart shows
@@ -1067,16 +1067,14 @@ submission's technical-obstacles answer wants.
 8. **Two failure paths have no visible artefact.** The rate-limit backoff is four
    seconds of nothing happening; the Razorpay error path is one audit row. Both
    are in `docs/failure-paths.md` with a recommendation on each.
-9. **`docs/pitch/` still has no video script or submission answers.** That is
-   Phase 8's job and nothing here pre-empted it.
-10. **The screenshots in `docs/pitch/screenshots/` predate the unified run.**
-    They show Phase 6's three separate batch ids. The numbers are identical, so
-    nothing in them is wrong — but the batch ids on screen will not match a
-    freshly-run unified demo. Recapture before recording.
+9. **The screenshots in `docs/screenshots/` predate the unified run.** They show
+   Phase 6's three separate batch ids. The numbers are identical, so nothing in
+   them is wrong — but the batch ids on screen will not match a freshly-run
+   unified demo.
 
 ### Not done in this phase (deliberately)
 
-No deployment, no video, no new engine capability, and no refactors that were not
-fixing a real defect. `pytest-cov` was not added to `requirements.txt`. Engine
+No deployment, no new engine capability, and no refactors that were not fixing a
+real defect. `pytest-cov` was not added to `requirements.txt`. Engine
 1's wall-clock timestamps and the untyped `BatchRun.notes` were both left as they
 are. The screenshots were not recaptured. Commits were left to the user.

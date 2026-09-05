@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
  * are the one interactive surface a judge will actually click during a demo, and
  * a native select opens instantly, works on any window size, and cannot get
  * stuck in a portal. The Radix version buys keyboard niceties this build does
- * not need, at the cost of a dependency and a failure mode on camera.
+ * not need, at the cost of a dependency and a failure mode in a live demo.
  */
 export interface SelectOption {
   value: string;

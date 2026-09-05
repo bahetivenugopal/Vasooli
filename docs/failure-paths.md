@@ -14,13 +14,13 @@ Two things are asserted for every path, because either alone is insufficient:
    loudly — a system that degrades without recording it reports fallback output
    as though it were reasoning.
 
-The right-hand column is the one Phase 8 needs: **is this worth pointing a camera
-at?**
+The right-hand column answers the practical question: **when this path fires,
+is there anything to see?**
 
-| # | Failure | How it degrades | On camera? |
+| # | Failure | How it degrades | Observable? |
 | --- | --- | --- | --- |
 | 1 | Gemini unavailable mid-batch | reasoned reads before the fault stay `source: model`; everything after takes its registered fallback and is audited `source: deterministic` with `degradation_reason: "provider unavailable: …"`. The batch completes. | **Yes** — the mixed-provenance trail is the clearest single picture of the fallback contract |
-| 2 | Rate limit beyond backoff | 1s / 2s / 4s backoff is actually attempted, then the task falls back. Reason recorded as `rate-limited beyond backoff`. | Mention, don't show — it is four seconds of nothing happening |
+| 2 | Rate limit beyond backoff | 1s / 2s / 4s backoff is actually attempted, then the task falls back. Reason recorded as `rate-limited beyond backoff`. | Not visibly — it is four seconds of nothing happening |
 | 3 | Deterministic-only across a full run | the whole unified run completes with **zero** model entries; the report's first screen says `DETERMINISTIC ONLY` before any number appears | **Yes** — "here it is with no API key at all" is the most practically valuable property in the build |
 | 4 | Malformed LLM output | reprompted once with the validation error fed back; a second failure falls back with `unparseable output twice` | Optional |
 | 5 | Razorpay test-mode API error | the error object is normalised through the same mapping table a real test-mode response uses; the failure is audited with the taxonomy code and the taxonomy's own rule id, and never raised | Optional |
@@ -28,7 +28,7 @@ at?**
 | 7 | Mandate revoked mid-sequence | `rbi-mandate-rules:A4` halts the schedule; the validator's terminal-means-terminal check confirms no `attempt_charge` follows a `halt_schedule` on any path | **Yes** — pairs naturally with #6 |
 | 8 | Dispute arriving mid-chase | `policy-bounds:RL4` freezes that invoice's ladder immediately; no reminder is sent to a customer who disputed; other customers keep being chased | **Yes** — the "never harassing" claim, demonstrated |
 | 9 | Empty or malformed input batch | an empty file and a malformed record are both refused with a `DatasetError` naming the file and the line, before any batch row is opened | No |
-| 10 | Backend down while the dashboard is open | the browser half is in [`smoke-checklist.md`](smoke-checklist.md) and screenshotted; the API half is asserted — a crashed leg is marked `failed`, and the overview reads **completed** runs only, so a partial trail can never become the headline | Show the browser half only |
+| 10 | Backend down while the dashboard is open | the browser half is in [`smoke-checklist.md`](smoke-checklist.md) and screenshotted; the API half is asserted — a crashed leg is marked `failed`, and the overview reads **completed** runs only, so a partial trail can never become the headline | The browser half only |
 
 ---
 
@@ -59,7 +59,7 @@ What makes it demonstrable rather than merely true:
 
 ## What confidence is, and is not, good for
 
-Worth knowing before relying on it in a demo:
+Worth knowing before relying on it:
 
 - **The model is well calibrated when asked to judge.** On a genuinely ambiguous
   corridor it returned 0.45 — below the 0.60 floor — and the deterministic
@@ -75,7 +75,7 @@ the model cannot reach.
 
 ## Known rough edges in these paths
 
-Stated because Phase 8 should know what not to point at:
+Stated so nobody relies on these paths being visible:
 
 - **Path 2 has no visible artefact.** The backoff is real and asserted, but on
   screen it is a pause.

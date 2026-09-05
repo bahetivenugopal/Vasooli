@@ -224,8 +224,8 @@ class ScheduleExplanation(BaseModel):
     """What this mandate gets next, when, and which rule permits it.
 
     A first-class output rather than a log line, because it is what the dashboard
-    renders and what the video demonstrates. If the engine cannot state its next
-    move in one sentence with a citation, the boundedness claim is decoration.
+    renders. If the engine cannot state its next move in one sentence with a
+    citation, the boundedness claim is decoration.
     """
 
     model_config = ConfigDict(frozen=True)

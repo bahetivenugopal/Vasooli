@@ -241,7 +241,7 @@ function Detections({ batchId }: { batchId: string }) {
         }
       >
         {(detections) => (
-          <Card>
+          <Card id="detections">
             <CardContent className="p-0">
               <Table>
                 <TableHeader>
@@ -322,7 +322,7 @@ function Detections({ batchId }: { batchId: string }) {
                       </TableCell>
                       <TableCell>
                         <Link
-                          href={`/timelines/corridor/${encodeURIComponent(detection.detection_id)}`}
+                          href={`/timelines/corridor/${encodeURIComponent(detection.detection_id)}?from=%2Fengines%2Froot-cause%23detections&fromLabel=root-cause+detections`}
                           className="inline-flex items-center gap-1 text-sm font-medium hover:underline"
                         >
                           Timeline

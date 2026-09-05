@@ -39,7 +39,7 @@ It also targets the largest measurable money in the project: involuntary churn i
 
 ### Out of scope
 - Invoice/receivables workflows — Phase 5.
-- Voice delivery — optional bonus, only after Phase 8's core work is complete, never before.
+- Voice delivery — optional bonus, only after everything else is complete, never before.
 - Actually sending messages to real people. Communications are generated, policy-gated, logged, and rendered — never dispatched to a real recipient. State this plainly in the docs; simulated delivery honestly labelled is far better than a real send with no consent path.
 
 ---
@@ -69,7 +69,7 @@ Constraints to enforce:
 - **Hard-stop conditions** — revoked mandate, closed account, or terminal customer state halts everything immediately and irreversibly.
 - **Quiet hours** — reuse Phase 1's communication limits for any customer-facing message.
 
-The scheduler must be **explainable per decision**: for any mandate, it should be able to state what it will do next, when, and which rule permits it. This is what the dashboard visualizes in Phase 6 and what the video demonstrates, so build the explanation as a first-class output, not an afterthought.
+The scheduler must be **explainable per decision**: for any mandate, it should be able to state what it will do next, when, and which rule permits it. This is what the dashboard visualizes in Phase 6, so build the explanation as a first-class output, not an afterthought.
 
 ### 5.3 Dunning communication (LLM)
 
@@ -113,7 +113,7 @@ Trigger run, fetch summary, list mandates with current recovery state, fetch one
 | Dunning drafting task and constraints | `policy-architect` (tone as policy) | `audit-schema` |
 | Subscription/mandate API calls | `razorpay-integrator` | `razorpay-api` |
 | Tests | `test-engineer` | `rbi-mandate-rules`, `decline-taxonomy` |
-| ADRs and docs | `docs-and-pitch-writer` | — |
+| ADRs and docs | — | — |
 | Commits | — | `conventional-commits` |
 
 Every rule in this phase must cite a specific clause in `rbi-mandate-rules`, or be explicitly labelled a product decision in the ADR. No plausible-sounding invented thresholds.

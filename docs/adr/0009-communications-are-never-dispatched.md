@@ -8,8 +8,8 @@ Engine 2 drafts messages to customers whose recurring payment failed: a pre-debi
 notification, a request to update a dead card, a request to authenticate a
 high-value debit. Engine 3 will draft invoice reminders on the same machinery.
 
-The tempting demo is one that actually sends. It is more impressive on a video,
-and the plumbing is a few lines — an SMTP call, a WhatsApp Business API call, a
+The tempting demo is one that actually sends. It looks more impressive, and the
+plumbing is a few lines — an SMTP call, a WhatsApp Business API call, a
 transactional SMS gateway.
 
 The synthetic customers in `data/samples/mandates/mandates.jsonl` have names and
@@ -81,9 +81,9 @@ production-ready.
 credentials, no rate limits, nothing that can fail during a demo for reasons
 unrelated to the product.
 
-**Good.** The full message text is in the database, so the dashboard and the
-video can show exactly what a customer would have received, next to the rule that
-permitted it and the failure that prompted it.
+**Good.** The full message text is in the database, so the dashboard can show
+exactly what a customer would have received, next to the rule that permitted it
+and the failure that prompted it.
 
 **Limitation, stated.** Delivery, deliverability and reply handling are entirely
 untested. Any claim about recovery rates from messaging is a claim about drafting

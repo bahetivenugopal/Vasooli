@@ -7,11 +7,10 @@ description: Commit message format for this repo — type(scope) subject lines, 
 
 ## Why this matters more than usual here
 
-The submission requires a **"Build Challenges & Technical Obstacles"** write-up,
-and `docs-and-pitch-writer` is instructed to build it from **real git history and
-ADRs** — never from invented narrative.
+The record of what this project actually went through is its **git history and
+its ADRs** — never an invented narrative written afterwards.
 
-That makes the git log a **submission artifact**, not housekeeping. A history of
+That makes the git log a **first-class artifact**, not housekeeping. A history of
 twelve commits saying `update` is a history that can produce nothing honest. Write
 each message as though someone will read it back to you in an interview, because
 they might.
@@ -33,7 +32,7 @@ they might.
 | `feat` | New capability |
 | `fix` | Bug fix |
 | `test` | Adding or correcting tests |
-| `docs` | Documentation, README, ADRs, pitch material |
+| `docs` | Documentation, README, ADRs |
 | `refactor` | Restructuring with no behaviour change |
 | `chore` | Tooling, deps, config, scaffolding |
 | `perf` | Performance work |

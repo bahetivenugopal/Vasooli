@@ -86,7 +86,7 @@ Requirements:
 
 - Persist every extracted promise with: invoice, committed date, committed amount, conditionality, confidence, source reply, and status (`active`, `kept`, `broken`, `superseded`).
 - A promise is **kept** when payment arrives by the committed date, **broken** when the date passes without payment, and **superseded** when a later reply revises it.
-- **Broken-promise detection runs as an explicit check**, and only a broken promise (or ladder exhaustion) advances escalation. This is the engine's core differentiation — say it in the pitch: *the system does not chase people who are cooperating; it chases the ones who committed and didn't follow through.*
+- **Broken-promise detection runs as an explicit check**, and only a broken promise (or ladder exhaustion) advances escalation. This is the engine's core differentiation — say it plainly: *the system does not chase people who are cooperating; it chases the ones who committed and didn't follow through.*
 - Track and report **promise reliability per customer** — this feeds prioritization on subsequent runs and demonstrates the system learning from behavior over time.
 
 ### 5.5 Payment path
@@ -124,7 +124,7 @@ Trigger run, fetch summary, ranked worklist with score breakdown, single-invoice
 | Extraction accuracy measurement | `data-synthesizer` (ground-truth comparison) | — |
 | Payment link creation | `razorpay-integrator` | `razorpay-api` |
 | Tests | `test-engineer` | — |
-| ADRs and docs | `docs-and-pitch-writer` | — |
+| ADRs and docs | — | — |
 | Commits | — | `conventional-commits` |
 
 ---
@@ -163,7 +163,7 @@ Trigger run, fetch summary, ranked worklist with score breakdown, single-invoice
 - ADR: why escalation is gated on broken promises rather than elapsed time, and what that trades off.
 - ADR: how extraction accuracy is measured and why the ground truth is trustworthy.
 - Update `docs/architecture.md` with Engine 3's flow.
-- Record honest extraction metrics including the specific categories where the model struggled — those failure cases are genuinely interesting material for both the video and the interview.
+- Record honest extraction metrics including the specific categories where the model struggled — those failure cases are genuinely interesting material for the write-up and the interview.
 
 ---
 

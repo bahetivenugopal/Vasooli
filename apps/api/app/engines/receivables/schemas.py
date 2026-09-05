@@ -387,9 +387,9 @@ class ChasePlan(BaseModel):
     """What this invoice gets next, when, and which rule permits it.
 
     A first-class output rather than a log line, for the same reason Engine 2's
-    `ScheduleExplanation` is: it is what the dashboard renders and what the video
-    demonstrates. An engine that cannot state its next move in one sentence with
-    a citation has a boundedness claim that is decoration.
+    `ScheduleExplanation` is: it is what the dashboard renders. An engine that
+    cannot state its next move in one sentence with a citation has a boundedness
+    claim that is decoration.
     """
 
     model_config = ConfigDict(frozen=True)

@@ -739,8 +739,8 @@ packages/shared-types/    types generated from the API's own OpenAPI schema
 
 **The dashboard never computes a metric.** Everything it renders was recomputed
 from the audit trail by the API; the browser formats and nothing else. Two places
-that compute a number are two numbers that eventually disagree, and the one that
-disagrees on camera is the one nobody can defend.
+that compute a number are two numbers that eventually disagree, and the one a
+reviewer happens to read is the one nobody can defend.
 
 That rule is what forced the two API additions this phase needed:
 
@@ -767,7 +767,7 @@ back — is a third, distinct marker, because "the model was asked and could not
 answer" is a different fact from "no model was involved".
 
 This is the product's central safety claim rendered as colour and shape rather
-than as a caption. The distinction has to survive a compressed video on a
+than as a caption. The distinction has to survive a low-quality screen share on a
 projector, so it is carried three ways at once: the rail, the icon and the badge.
 
 ### The trust strip
@@ -786,11 +786,12 @@ Most dashboards hide their refusals. Showing them is the point.
 - No provider registry or plugin machinery — one interface, one implementation
 - No Postgres migration
 - No checkout drop-off recovery (out of scope)
-- Hinglish voice only as an optional bonus channel on Engine 2's notification
-  step, and only once all three engines are solid and demo-ready. Note that
-  Engine 3 *reads* Hinglish and only ever writes English; `services/tone.py`'s
-  forbidden-language patterns are English-only, so a vernacular outreach channel
-  would need that list extended before it shipped
+- No Hinglish **voice** channel. Note the boundary: Engine 3 already *reads*
+  Hinglish as a first-class case (tagged `en` / `hinglish` / `mixed`, 11/11 on
+  the measured run) and only ever *writes* English. What is not built is a
+  vernacular outreach channel on Engine 2's notification step — and
+  `services/tone.py`'s forbidden-language patterns are English-only, so that
+  list would need extending before one shipped
 
 All of these would be premature complexity with no payoff for judges in a ~30-hour
 build. Reversing any of them requires an ADR in [`adr/`](adr/).

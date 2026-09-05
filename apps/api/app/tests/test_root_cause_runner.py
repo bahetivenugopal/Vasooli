@@ -153,7 +153,7 @@ def test_a_run_produces_refusals_as_well_as_actions(run):
 
 
 def test_at_least_one_denial_overruled_a_model_recommendation(run):
-    """The number the pitch should say out loud. Non-zero is the feature."""
+    """The number worth stating out loud. Non-zero is the feature."""
     db, artefacts = run
     overruled = [
         e

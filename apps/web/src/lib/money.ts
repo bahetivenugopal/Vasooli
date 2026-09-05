@@ -3,7 +3,7 @@
  *
  * Money is integer paise everywhere in this project — never a float — and is
  * converted to rupees at display only. That conversion happens here and in no
- * other file: a second formatter is how a lakh becomes a crore on camera, and
+ * other file: a second formatter is how a lakh quietly becomes a crore, and
  * it is the kind of bug that is invisible until the exact moment it is not.
  *
  * All formatting uses the `en-IN` locale, so separators are the Indian grouping

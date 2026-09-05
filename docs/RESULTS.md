@@ -1,6 +1,6 @@
 # Results — the measured unified run
 
-> Every number quoted in the video, the README or the submission form comes from
+> Every number quoted in the README or anywhere else in this repo comes from
 > here. If a figure appears somewhere else in this project and disagrees with
 > this file, this file is wrong or that figure is — either way, one of them is a
 > bug, not a difference of framing.
@@ -236,7 +236,7 @@ result is audited as `source: deterministic`. Nobody arranged that.
    disagree, because there is nothing to disagree.
 3. **The dashboard computes nothing.** Not one arithmetic operation on a metric
    happens in the browser. Two places that compute a number are two numbers that
-   eventually disagree, and one of them disagrees on camera.
+   eventually disagree, and one of them is the wrong one.
 4. **Money is integer paise everywhere**, formatted to ₹ at display only, in
    exactly one utility per side of the wire.
 5. **The run audits itself.** Before printing, it recomputes every headline

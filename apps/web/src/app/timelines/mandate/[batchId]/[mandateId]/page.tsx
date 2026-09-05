@@ -20,7 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AsyncBoundary } from "@/components/features/async-boundary";
 import { Field, Money } from "@/components/features/metric-card";
-import { PageHeader } from "@/components/features/app-shell";
+import { BackLink, PageHeader } from "@/components/features/app-shell";
 import { ProvenanceBadge, RuleBadge } from "@/components/features/provenance-badge";
 import { Timeline, TimelineLegend } from "@/components/features/timeline";
 import { api } from "@/lib/api";
@@ -41,6 +41,7 @@ export default function MandateTimelinePage({
 
   return (
     <>
+      <BackLink fallbackHref="/engines/mandate-recovery" fallbackLabel="the retry schedule" />
       <PageHeader
         title="Mandate timeline"
         description="One recurring charge: what failed, how it was classified, which compliance gate spoke, what the model drafted, and what the system is permitted to do next."

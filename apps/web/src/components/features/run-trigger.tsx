@@ -3,7 +3,7 @@
 /**
  * The batch run trigger. One component, all three engines.
  *
- * §5.2 wants a visible trigger so a live demo can start a run on camera, and
+ * §5.2 wants a visible trigger so a run can be started from the browser, and
  * §5.6 wants visible progress rather than a frozen screen. The backend's
  * `POST /runs` is synchronous and can take tens of seconds against a live
  * provider, so this shows an elapsed timer and the stage it is in while the

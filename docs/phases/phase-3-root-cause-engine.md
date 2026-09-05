@@ -12,7 +12,7 @@ Build the first engine: detect when a payment corridor is degrading, diagnose *w
 
 ## 2. Why this phase comes third
 
-This is the engine that most justifies the word "agent" in the pitch. The others are strong workflows; this one requires genuine judgment under ambiguity. The central problem — *is this one customer's failure, or is an entire corridor down?* — looks identical from a single decline code and demands opposite responses. Getting this right is what separates the project from a retry loop with a chat interface on top.
+This is the engine that most justifies the word "agent" in this project. The others are strong workflows; this one requires genuine judgment under ambiguity. The central problem — *is this one customer's failure, or is an entire corridor down?* — looks identical from a single decline code and demands opposite responses. Getting this right is what separates the project from a retry loop with a chat interface on top.
 
 Building it first among the engines also stress-tests the shared core hardest, surfacing any Phase 1 interface weaknesses while there's still time to fix them cleanly.
 
@@ -69,7 +69,7 @@ The model must return structured output containing:
 - **Stated reasoning**, captured verbatim into the audit trail. This is what makes the demo compelling: the judge sees not just what happened but why the system believed it.
 - **An explicit "insufficient evidence" option.** A model that always produces a confident diagnosis is a model that will confidently be wrong. Make abstention a first-class outcome and show it working — this is a genuine trust feature, not a limitation.
 
-**This task's deterministic fallback**, registered per the Phase 1 contract: classify from the decline-code distribution alone — failures concentrated on one corridor and dominated by timeout/gateway-class reasons resolve to systemic; failures spread across many distinct customers with fund/account-class reasons resolve to individual; anything else resolves to **insufficient evidence and escalates to human review**. Biasing toward escalation under degraded reasoning is the correct behaviour, not a weakness. The fallback fires when the provider is unavailable, rate-limited beyond backoff, returns unparseable output twice, or when deterministic-only mode is configured. Every fallback is audited with `source: deterministic`. Demonstrating this working is one of the strongest things in the pitch — the competition explicitly rewards a failure handled gracefully.
+**This task's deterministic fallback**, registered per the Phase 1 contract: classify from the decline-code distribution alone — failures concentrated on one corridor and dominated by timeout/gateway-class reasons resolve to systemic; failures spread across many distinct customers with fund/account-class reasons resolve to individual; anything else resolves to **insufficient evidence and escalates to human review**. Biasing toward escalation under degraded reasoning is the correct behaviour, not a weakness. The fallback fires when the provider is unavailable, rate-limited beyond backoff, returns unparseable output twice, or when deterministic-only mode is configured. Every fallback is audited with `source: deterministic`. Demonstrating this working is one of the strongest things in the build — the competition explicitly rewards a failure handled gracefully.
 
 ### 5.3 The recovery layer
 
@@ -92,7 +92,7 @@ The summary must report honestly:
 - Detection performance against ground truth: true positives, false positives, false negatives, and detection latency (how long after degradation onset it fired).
 - Action counts by type, including suppressions.
 - Count of LLM fallbacks that occurred.
-- Count of policy denials — actions the LLM recommended that the rules refused. **This number being non-zero is a feature**, and the pitch should say so plainly: it's proof the gate is real.
+- Count of policy denials — actions the LLM recommended that the rules refused. **This number being non-zero is a feature**, and the README should say so plainly: it's proof the gate is real.
 - Any human escalations raised.
 
 All figures computed from the audit trail, never from side-counters that could drift.
@@ -112,7 +112,7 @@ Thin routes over the runner and its results: trigger a batch run, fetch run summ
 | Recovery actions, Razorpay calls | `razorpay-integrator` | `razorpay-api` |
 | Batch runner metrics | `data-synthesizer` (ground-truth comparison) | — |
 | Tests | `test-engineer` | `decline-taxonomy` |
-| ADR and docs | `docs-and-pitch-writer` | — |
+| ADR and docs | — | — |
 | Commits | — | `conventional-commits` |
 
 ---

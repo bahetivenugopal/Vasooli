@@ -108,7 +108,7 @@ Rule categories to implement in this phase (generic, engine-agnostic):
 3. **Hard-stop conditions** — a permanent state (revoked mandate, closed account, entity marked resolved) immediately and irreversibly halts all further action on that entity.
 4. **Quiet-hours / communication limits** — no customer-facing outreach outside permitted hours; a cap on messages per entity per period. This is what keeps "chasing" from becoming harassment, and it is a genuine compliance posture, not decoration.
 5. **Amount thresholds** — hooks for value-dependent branching (later used for the ₹15,000 AFA threshold in Engine 2), implemented generically here.
-6. **Human-escalation trigger** — conditions under which the system must stop acting autonomously and hand off to a human. Every bounded agent needs an exit hatch, and being able to point at it in the pitch is worth more than another feature.
+6. **Human-escalation trigger** — conditions under which the system must stop acting autonomously and hand off to a human. Every bounded agent needs an exit hatch, and being able to point at it is worth more than another feature.
 
 Consult the `policy-architect` agent for this work, and require that every rule cites the `decline-taxonomy` or `rbi-mandate-rules` skill, or is explicitly labelled a product decision. Do not invent thresholds that sound plausible.
 

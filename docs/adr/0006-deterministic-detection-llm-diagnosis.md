@@ -115,7 +115,7 @@ reported detection metric becomes a statement about one particular run.
 
 **Rules-only diagnosis.** Would have shipped, and would have been the more
 honest choice if the fallback were the only path — but it makes the central
-claim of the pitch ("a real model reasoning call, never a hardcoded if/else")
+claim of this project ("a real model reasoning call, never a hardcoded if/else")
 false. The fallback exists precisely so that claim can be true *and* the batch
 can always complete.
 

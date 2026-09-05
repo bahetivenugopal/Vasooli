@@ -20,7 +20,7 @@ not reach the API" panel.
 | `05-audit-trail.png` | Audit trail | Every filter, and the policy-denials-only preset |
 | `06-timeline-corridor.png` | Corridor timeline | The statistics, the model's diagnosis verbatim, and the gate's answer |
 | `07-timeline-mandate-compliance-blocked.png` | Mandate timeline | **An unhappy path** — a debit an RBI precondition refused |
-| `08-timeline-invoice-broken-promise.png` | Invoice timeline | **The story that carries the video** — reminder, reply verbatim, the model's reading, the promise, its breach, the escalation |
+| `08-timeline-invoice-broken-promise.png` | Invoice timeline | **The whole argument on one screen** — reminder, reply verbatim, the model's reading, the promise, its breach, the escalation |
 | `09-failure-state-api-unreachable.png` | Failure state | The API down. A visible, actionable error rather than a blank page |
 | `10-empty-state-no-runs.png` | Empty state | No completed runs: how to get data, not a bare empty table |
 | `11-empty-state-audit.png` | Empty state | The audit trail with nothing in it |

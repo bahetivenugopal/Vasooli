@@ -12,7 +12,7 @@ Writes two files into `packages/shared-types/`:
 **Why generated rather than hand-written.** Phase 6 §5.6: "Types come from the
 backend. Do not hand-write drifting duplicates." A hand-aligned type is correct
 on the day it is written and wrong the first time a Pydantic field is renamed,
-and the failure mode is a dashboard that renders `undefined` on camera rather
+and the failure mode is a dashboard that renders `undefined` at runtime rather
 than one that fails to compile.
 
 **Why not `openapi-typescript`.** It would work, and it would add a Node

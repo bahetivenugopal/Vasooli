@@ -6,11 +6,11 @@
 
 ## 1. What this project is
 
-**Vasooli** is an AI-first revenue recovery platform built for a Razorpay-run student hackathon (the "Buildathon"). Selection is signal-based: no resume screen, no test — a public GitHub repo, a 5-minute pitch video, and an architecture walkthrough are submitted, and if the panel sees genuine signal, the builder goes straight to an interview for a paid **AI Builder Intern** role. **Deadline: noon, 5th September.** Every decision in this document was made under that time constraint — favor working and provable over ambitious and half-finished at every fork.
+**Vasooli** is an AI-first revenue recovery platform built for a Razorpay-run student hackathon (the "Buildathon"). Selection is signal-based: no resume screen, no test — a public GitHub repo and an architecture walkthrough are submitted, and if the panel sees genuine signal, the builder goes straight to an interview for a paid **AI Builder Intern** role. **Deadline: noon, 5th September.** Every decision in this document was made under that time constraint — favor working and provable over ambitious and half-finished at every fork.
 
 **Tagline**: *"Revenue doesn't disappear. It goes missing. Vasooli brings it back."*
 
-**One-paragraph pitch**: Businesses lose revenue in three distinct, quietly compounding ways — a payment corridor degrades and nobody notices, a recurring mandate/subscription charge fails and the customer never meant to churn, or a B2B invoice goes overdue and just sits there. Vasooli is one shared recovery engine — one policy layer, one LLM-powered reasoning layer, one audit trail — applied to all three leak points, so every recovery action is bounded, explainable, and provably compliant, not just "an agent that tries stuff."
+**One-paragraph summary**: Businesses lose revenue in three distinct, quietly compounding ways — a payment corridor degrades and nobody notices, a recurring mandate/subscription charge fails and the customer never meant to churn, or a B2B invoice goes overdue and just sits there. Vasooli is one shared recovery engine — one policy layer, one LLM-powered reasoning layer, one audit trail — applied to all three leak points, so every recovery action is bounded, explainable, and provably compliant, not just "an agent that tries stuff."
 
 ---
 
@@ -20,13 +20,13 @@
 
 **The bar we are explicitly building to clear**: don't just identify the problem — show **measured money recovered across a batch**, with **compliant escalation**, **stopping rules**, and an **audit trail**. Every number Vasooli reports must be honestly computed from its own synthetic batch, never cherry-picked.
 
-**Submission requires**: Project name/title, project objectives (what it solves), GitHub repo URL, 5-minute pitch video link, and a "Build Challenges & Technical Obstacles" write-up (what issues came up while building and how they were solved — this should be written from real git history/ADRs later, not invented).
+**Submission requires**: Project name/title, project objectives (what it solves), GitHub repo URL, and a "Build Challenges & Technical Obstacles" write-up (what issues came up while building and how they were solved — this should be written from real git history/ADRs later, not invented).
 
 ---
 
 ## 3. Product scope — the three engines
 
-We deliberately chose **3 unified capabilities that absorb 5 of the track's 7 example directions**, sharing one backbone, rather than building one shallow demo per example direction. This is the core differentiation story — say it explicitly in the README and the video: *"most teams will build one demo around one example. We built the shared recovery infrastructure that spans the track's own full breadth — payment failures, subscriptions, receivables — with one policy layer and one audit trail underneath all three."*
+We deliberately chose **3 unified capabilities that absorb 5 of the track's 7 example directions**, sharing one backbone, rather than building one shallow demo per example direction. This is the core differentiation story — say it explicitly in the README: *"most teams will build one demo around one example. We built the shared recovery infrastructure that spans the track's own full breadth — payment failures, subscriptions, receivables — with one policy layer and one audit trail underneath all three."*
 
 ### Engine 1 — Root-Cause Recovery Engine
 Covers example direction: *payment degradation → root cause → recovery*.
@@ -74,7 +74,7 @@ Engine 2's retry scheduler must be provably bounded by these constraints (max re
 | Payments | Official `razorpay` Python SDK; direct `httpx` calls only for anything the SDK doesn't cover; **test-mode keys only, always** |
 | Testing | Pytest, focused heavily on `policy_engine.py` — this is the credibility backbone of the whole submission |
 | Lint/format | Ruff (Python), ESLint + Prettier (TS) |
-| Deployment | Stretch goal only, after all 3 engines work locally and the video is recorded — Vercel (frontend) + Railway/Render (backend) |
+| Deployment | Stretch goal only, after all 3 engines work locally — Vercel (frontend) + Railway/Render (backend) |
 
 Rationale in one line: this stack is the one Claude Code has the deepest, most reliable fluency in — fewer hallucinated APIs, faster correct-on-first-try generation — while giving up nothing a "better" stack would offer at this scale and time budget.
 
@@ -119,8 +119,7 @@ vasooli/
 │   │   ├── razorpay-integrator.md
 │   │   ├── data-synthesizer.md
 │   │   ├── frontend-builder.md
-│   │   ├── test-engineer.md
-│   │   └── docs-and-pitch-writer.md
+│   │   └── test-engineer.md
 │   ├── skills/
 │   │   ├── razorpay-api/SKILL.md
 │   │   ├── llm-provider/SKILL.md
@@ -162,8 +161,7 @@ vasooli/
 │   └── samples/
 ├── docs/
 │   ├── architecture.md
-│   ├── adr/
-│   └── pitch/
+│   └── adr/
 ├── scripts/
 ├── .env.example
 ├── .gitignore
@@ -183,7 +181,6 @@ Every agent must be written with an explicit **Role / Task / Context** structure
 - **`data-synthesizer.md`** — Role: synthetic data engineer. Task: generate realistic, **seeded/reproducible** batches of transactions, mandates, and invoices with controlled, documented distributions (decline-code mix, ageing, mandate windows). Context: judges must be able to trust the batch wasn't cherry-picked — reproducibility is non-negotiable.
 - **`frontend-builder.md`** — Role: product-minded frontend engineer. Task: build the control tower dashboard. Context: never create a new primitive if one already exists in `components/ui/` — reuse or extend, don't duplicate.
 - **`test-engineer.md`** — Role: QA engineer obsessive about edge cases. Task: write pytest coverage for every stopping rule and decline-classification path. Context: treat `policy_engine.py` coverage as the single highest-priority code in the repo — it's the proof behind "bounded and gated."
-- **`docs-and-pitch-writer.md`** — Role: technical writer + pitch coach. Task: keep README/architecture docs in sync with code as it's built; later, draft the video script and the submission form's "Build Challenges" answer. Context: pull real challenges from actual git log / ADRs — never invent one for narrative effect.
 
 ### Skills (`.claude/skills/*/SKILL.md`)
 
@@ -204,7 +201,7 @@ Reference knowledge loaded before touching related code — same pattern as this
 
 ### `CLAUDE.md` (project root)
 
-Must contain, concisely: the one-paragraph pitch (section 1), the tech stack table (section 5), the folder-naming conventions (section 7), a note that agents are RTC-framed and where to find them, and an explicit **scope guardrail**: state the noon-5th-September deadline plainly and instruct that if a task looks like it will blow the remaining time budget, flag it and propose a smaller version rather than silently building the full version.
+Must contain, concisely: the one-paragraph summary (section 1), the tech stack table (section 5), the folder-naming conventions (section 7), a note that agents are RTC-framed and where to find them, and an explicit **scope guardrail**: state the noon-5th-September deadline plainly and instruct that if a task looks like it will blow the remaining time budget, flag it and propose a smaller version rather than silently building the full version.
 
 ---
 
@@ -219,7 +216,7 @@ Do the following, in this order, and nothing beyond it:
 5. Initialize `apps/api` as a FastAPI project with a minimal `main.py` (a health-check route is enough), `requirements.txt` pinned to reasonable versions, Pydantic v2, SQLAlchemy configured against a local SQLite file, and Ruff configured.
 6. Write `.env.example` covering: Razorpay test-mode key id/secret, `GEMINI_API_KEY`, `GEMINI_MODEL` (defaulting to `gemini-3.1-flash-lite-preview`), a flag to force deterministic-only mode, an LLM response cache path, and the DB path.
 7. Write a `.gitignore` covering both Node and Python (node_modules, .next, __pycache__, .venv, .env, *.db, etc).
-8. Write a first-pass `README.md`: project name, one-paragraph pitch, the architecture diagram (ASCII from section 6 is fine for now), and a "status: scaffolding complete, build in progress" note.
+8. Write a first-pass `README.md`: project name, one-paragraph summary, the architecture diagram (ASCII from section 6 is fine for now), and a "status: scaffolding complete, build in progress" note.
 9. Stop. Do not build any engine logic, any product routes beyond the health check, or any dashboard pages. That work comes in separate phase files that will be added to this repo next, one at a time, each followed by a check and a commit.
 
 **Do not skip step 9.** The whole point of phasing this project is verifiable, committable progress — building ahead of the current phase defeats that.

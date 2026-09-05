@@ -4,7 +4,7 @@
  * §5.6 makes reuse a rule rather than a preference, and money is the specific
  * case worth being strict about: `<Money>` is the only component that renders a
  * rupee value, and it delegates to the one formatter in `lib/money.ts`. A second
- * place that turns paise into rupees is how a lakh becomes a crore on camera.
+ * place that turns paise into rupees is how a lakh quietly becomes a crore.
  */
 
 import type { ReactNode } from "react";

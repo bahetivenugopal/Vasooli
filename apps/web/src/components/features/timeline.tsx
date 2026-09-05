@@ -3,8 +3,8 @@
 /**
  * The entity timeline. One component, used by all three timeline types.
  *
- * §5.4: this is the surface that carries the video, because a single case
- * unfolding chronologically is a story while a dashboard of aggregates is a
+ * §5.4: this is the surface that carries the whole argument, because a single
+ * case unfolding chronologically is a story while a dashboard of aggregates is a
  * report. Every step shows, in order: what happened, what the system decided,
  * **which rule authorised it**, what the model reasoned (verbatim), what action
  * followed, and how it turned out.
@@ -12,7 +12,7 @@
  * The one thing this component must get right is that rule-based and
  * LLM-reasoned steps are distinguishable *without explanation*. That is done
  * three ways at once — the rail colour, the icon, and the provenance badge — so
- * the distinction survives a compressed video and a projector.
+ * the distinction survives a low-quality screen share and a projector.
  */
 
 import { useState } from "react";

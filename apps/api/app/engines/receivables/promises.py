@@ -1,8 +1,8 @@
 """Promise-to-pay tracking, and the explicit broken-promise check.
 
-The engine's differentiator lives here, and it is worth stating as plainly as the
-pitch does: *the system does not chase people who are cooperating; it chases the
-ones who committed and did not follow through.*
+The engine's differentiator lives here, and it is worth stating plainly: *the
+system does not chase people who are cooperating; it chases the ones who
+committed and did not follow through.*
 
 That claim rests on four decisions, all of which are rules rather than code
 conventions:

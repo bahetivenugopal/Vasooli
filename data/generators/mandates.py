@@ -66,7 +66,7 @@ CYCLE_DAYS = {"weekly": 7, "monthly": 30, "quarterly": 90}
 
 #: How many failed attempts each cohort has already made in the current cycle.
 #: `cap_reached` is 3 because that is the `rbi-mandate-rules` Part B ceiling —
-#: those mandates exist so a 4th attempt can be refused on camera.
+#: those mandates exist so a 4th attempt can be refused in a run.
 COHORT_FAILURES = {
     "healthy": 0,
     "notice_violation": 0,

@@ -3,9 +3,8 @@
  *
  *     npm run screenshots            # from apps/web
  *
- * Phase 6 §9 asks for screenshots of each major surface in `docs/pitch/`,
- * captured *before* the video phase so they are not being taken under pressure.
- * They also serve as the visual record of what the smoke checklist asserts.
+ * Phase 6 §9 asks for screenshots of each major surface in `docs/screenshots/`.
+ * They serve as the visual record of what the smoke checklist asserts.
  *
  * Both servers must be running first — `uvicorn app.main:app` from `apps/api`
  * and `npm run start` (or `npm run dev`) from `apps/web`.
@@ -27,7 +26,7 @@ import puppeteer from "puppeteer-core";
 
 //: The repo root, three levels up from `apps/web/scripts/`.
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
-const OUT_DIR = join(ROOT, "docs", "pitch", "screenshots");
+const OUT_DIR = join(ROOT, "docs", "screenshots");
 
 const WEB = process.env.WEB_BASE_URL ?? "http://127.0.0.1:3000";
 const API = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000";
@@ -147,8 +146,8 @@ async function main() {
     args: ["--no-sandbox", "--hide-scrollbars"],
   });
   const page = await browser.newPage();
-  // 1.5x rather than 2x: these are committed to the repo and feed a 1080p video,
-  // where 2x doubled the file size for detail nothing downstream can show.
+  // 1.5x rather than 2x: these are committed to the repo and viewed at roughly
+  // 1080p, where 2x doubled the file size for detail nothing downstream shows.
   await page.setViewport({ width: 1600, height: 1000, deviceScaleFactor: 1.5 });
 
   for (const [name, path] of shots) {
@@ -162,7 +161,7 @@ async function main() {
   }
 
   await browser.close();
-  console.log(`\n${shots.length} screenshots in docs/pitch/screenshots/`);
+  console.log(`\n${shots.length} screenshots in docs/screenshots/`);
 }
 
 main().catch((error) => {

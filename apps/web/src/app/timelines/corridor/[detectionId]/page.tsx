@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AsyncBoundary } from "@/components/features/async-boundary";
 import { Field, MetricCard, Money } from "@/components/features/metric-card";
-import { PageHeader } from "@/components/features/app-shell";
+import { BackLink, PageHeader } from "@/components/features/app-shell";
 import { ProvenanceBadge, RuleBadge } from "@/components/features/provenance-badge";
 import { Timeline, TimelineLegend } from "@/components/features/timeline";
 import { api } from "@/lib/api";
@@ -37,6 +37,7 @@ export default function CorridorTimelinePage({
 
   return (
     <>
+      <BackLink fallbackHref="/engines/root-cause" fallbackLabel="root-cause detections" />
       <PageHeader
         title="Corridor timeline"
         description="One degradation episode: the statistics that triggered it, what the reasoning layer concluded, and what the policy engine allowed to happen next."

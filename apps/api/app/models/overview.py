@@ -25,7 +25,7 @@ from app.models.enums import BatchStatus, Engine
 #: exposure, a mandate cycle's debit, an overdue invoice's balance — and each
 #: ships its own definition beside its own number. Blending them is what the
 #: cross-engine headline *is*, so the caveat travels with it rather than living
-#: in a doc nobody opens on camera.
+#: in a doc nobody opens.
 BLENDED_CAVEAT = (
     "Rupees at risk and rupees recovered are summed across the three engines' "
     "audit entries. The engines measure exposure differently — corridor value at "

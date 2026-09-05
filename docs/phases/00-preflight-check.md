@@ -29,7 +29,7 @@ Group findings into three buckets as you go:
 
 ## 2. Repository structure
 
-- [ ] Every directory from the init specification exists: `.claude/` with `agents/`, `skills/`, `commands/`; `apps/web/`; `apps/api/`; `packages/shared-types/`; `data/generators/` and `data/samples/`; `docs/` with `adr/` and `pitch/`; `scripts/`.
+- [ ] Every directory from the init specification exists: `.claude/` with `agents/`, `skills/`, `commands/`; `apps/web/`; `apps/api/`; `packages/shared-types/`; `data/generators/` and `data/samples/`; `docs/` with `adr/`; `scripts/`.
 - [ ] `apps/api/app/` contains `api/v1/routes/`, `core/`, `engines/` (with the three engine subfolders), `services/`, `models/`, `db/`, `tests/`.
 - [ ] `apps/web/src/` contains `app/`, `components/ui/`, `components/features/`, `lib/`, `hooks/`, `types/`.
 - [ ] No stray directories that aren't in the spec. If something extra exists, note why.
@@ -91,13 +91,12 @@ Group findings into three buckets as you go:
 
 This is what makes the rest of the build work correctly, so inspect the contents rather than just confirming files exist.
 
-**Agents** — all six present: `policy-architect`, `razorpay-integrator`, `data-synthesizer`, `frontend-builder`, `test-engineer`, `docs-and-pitch-writer`.
+**Agents** — all five present: `policy-architect`, `razorpay-integrator`, `data-synthesizer`, `frontend-builder`, `test-engineer`.
 
 - [ ] Each has an explicit Role, Task, and Context section. A file that's a vague paragraph is not done.
 - [ ] `policy-architect` explicitly forbids inventing thresholds and requires citing the domain skills.
 - [ ] `frontend-builder` explicitly forbids duplicating primitives that exist in `components/ui/`.
 - [ ] `test-engineer` explicitly names the policy engine as the highest-priority coverage target.
-- [ ] `docs-and-pitch-writer` explicitly forbids inventing build challenges.
 
 **Skills** — all six present, including `llm-provider`.
 
@@ -112,7 +111,7 @@ This is what makes the rest of the build work correctly, so inspect the contents
 
 **`CLAUDE.md`**
 
-- [ ] Contains the pitch, the tech stack, folder conventions, a pointer to the agents, and the scope guardrail.
+- [ ] Contains the summary, the tech stack, folder conventions, a pointer to the agents, and the scope guardrail.
 - [ ] The tech stack section names Gemini, not Anthropic.
 - [ ] It is at the path Claude Code actually reads. Confirm it loads at session start rather than assuming.
 
@@ -132,7 +131,7 @@ The change request touched many files. Verify it landed completely.
 
 ## 9. Documentation baseline
 
-- [ ] `README.md` exists with the project name, pitch, and architecture diagram.
+- [ ] `README.md` exists with the project name, summary, and architecture diagram.
 - [ ] `docs/architecture.md` exists, even if thin.
 - [ ] `docs/adr/` exists and contains the provider ADR from the migration.
 - [ ] All eight phase files are in the repo where they can be referenced.

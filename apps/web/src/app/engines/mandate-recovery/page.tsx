@@ -326,7 +326,7 @@ function MandateTable({
 }) {
   const rows = useRowLimit(mandates);
   return (
-    <Card>
+    <Card id="retry-schedule">
       <CardContent className="p-0">
         <Table>
           <TableHeader>
@@ -392,7 +392,7 @@ function MandateTable({
                 </TableCell>
                 <TableCell>
                   <Link
-                    href={`/timelines/mandate/${encodeURIComponent(batchId)}/${encodeURIComponent(mandate.mandate_id)}`}
+                    href={`/timelines/mandate/${encodeURIComponent(batchId)}/${encodeURIComponent(mandate.mandate_id)}?from=%2Fengines%2Fmandate-recovery%23retry-schedule&fromLabel=the+retry+schedule`}
                     className="inline-flex items-center gap-1 text-sm font-medium hover:underline"
                   >
                     Timeline

@@ -4,7 +4,7 @@
  * Everything here converts a value the API already produced into something
  * readable. Nothing derives, aggregates or recomputes: the dashboard's job is to
  * show what the audit trail computed, and the moment it starts calculating there
- * are two sources of truth and one of them is eventually wrong on camera.
+ * are two sources of truth and one of them is eventually the wrong one.
  */
 
 /** Timestamps arrive tz-aware UTC and are converted at display only. */

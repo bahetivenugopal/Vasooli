@@ -97,8 +97,8 @@ them.
 
 Every mismatch is emitted with the reply text, both readings, which claims were
 wrong, and the model's own stated reasoning. Those cases are the genuinely
-interesting material for the video and the interview, and a metric that reports
-only a percentage cannot produce them.
+interesting material for the write-up and the interview, and a metric that
+reports only a percentage cannot produce them.
 
 ## Why the ground truth is trustworthy — and where it is weak
 

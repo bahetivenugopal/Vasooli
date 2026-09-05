@@ -125,7 +125,7 @@ Generators produce the *world*; engines produce the *outcome*. Specifically:
 |---|---|---|
 | All three generators | `data-synthesizer` | `decline-taxonomy` (failure vocabulary), `rbi-mandate-rules` (mandate states, thresholds, notification windows) |
 | Reproducibility tests, distribution tests | `test-engineer` | — |
-| Data card | `docs-and-pitch-writer` | — |
+| Data card | — | — |
 | Commits | — | `conventional-commits` |
 
 The `data-synthesizer` agent must not invent decline reasons. Every failure string it emits must exist in the decline taxonomy. If the taxonomy lacks a reason the data genuinely needs, extend the skill file first, then use it.
